@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="/">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="/about/">About</a>
+        <a class="p-2 text-muted" href="/blog/">Blog</a>
+        <a class="p-2 text-muted" href="/blog/portfolio">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">Python DTO Choices</h2>
+    <p class="blog-post-meta">Feb. 13, 2022, 7:46 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="/blog/tag/django_1/">
+          Django
+        </a>
+        , 
+      
+        <a href="/blog/tag/dto/">
+          DTO
+        </a>
+        , 
+      
+        <a href="/blog/tag/pydantic/">
+          Pydantic
+        </a>
+        , 
+      
+        <a href="/blog/tag/attrs/">
+          Attrs
+        </a>
+        , 
+      
+        <a href="/blog/tag/salvo/">
+          Salvo
+        </a>
+        
+      
+    </p>
+    <p>DTO Stands for &#39;Data Transfer Object&#39;. But what does that mean? Well <a href="https://stackoverflow.com/a/1058186">this Stack Overflow post</a> gives a nice summary:</p>
+
+<blockquote>
+<p>&lsquo;A Data Transfer Object is an object that is used to encapsulate data, and send it from one subsystem of an application to another.&rsquo;</p>
+</blockquote>
+
+<p>Is data coming into your system from &lsquo;one place&rsquo; and being handed to &lsquo;another&rsquo;? A Data Transfer Object can be an intermediary in the code.</p>
+
+<p>For a recent project, I found myself using <a href="https://pydantic-docs.helpmanual.io/">Pydantic</a> to perform exactly this function. My Django application called a third party API, I parsed the response into Pydantic classes and then displayed these to my users in templates! Having previously toiled with accessing values in dict-like structures using square brackets, being able to get datapoints as attributes using dot notation felt like a breath of fresh air. Also the Pydantic classes are readable and typed: everything is just so simple to look at, I felt like I was comprehending my code better.<br />
+<br />
+&#39;Classic&#39;(?) Class Definition:&nbsp;</p>
+
+<pre>
+<code class="language-python">class Example:
+    def __init__(self, other: str, thing: str = None):
+        self.other = other
+        self.thing = thing</code></pre>
+
+<p>Same class, but via Pydantic:&nbsp;</p>
+
+<pre>
+<code class="language-python">class Example(BaseModel):
+    other: str 
+    thing: str = None</code></pre>
+
+<p>Accessing values from a <em>dict-like</em> object:&nbsp;</p>
+
+<pre>
+<code class="language-python">a_thing['foo']['bar']</code></pre>
+
+<p>Getting values with <em>class-like</em> dot notation (IMO: nicer to write, nicer to read)&nbsp;</p>
+
+<pre>
+<code class="language-python">a_thing.foo.bar</code></pre>
+
+<p><br />
+However, it soon became clear to me that this &lsquo;nicer&rsquo; class definition is a problem that has been solved many times over in Python. There are many standard library solutions, as well as third party packages, allowing you to basically write classes without &lsquo;dunder&rsquo; methods. I began to panic and wonder if I had made the right choice with Pydantic? This probably warranted some kind of benchmarking attempt, so that I could make a call on whether or not to swap out Pydantic for the equally esteemed &lsquo;<a href="https://www.attrs.org/en/stable/">Attrs</a>&rsquo;, or something from the standard library liked &lsquo;<a href="https://www.python.org/dev/peps/pep-0589/">Typed Dict</a>&rsquo;.</p>
+
+<p>In order to simulate what I&rsquo;m doing in my app most closely I am going to:</p>
+
+<p>1) Create views which initially call an external API endpoint. <a href="https://mixedanalytics.com/blog/list-actually-free-open-no-auth-needed-apis/">I found this one which</a> gives fake &lsquo;user&rsquo; data:</p>
+
+<pre>
+<code class="language-bash">https://randomuser.me/api/</code></pre>
+
+<p>It returns&nbsp;a response body like so:</p>
+
+<pre>
+<code class="language-json">{
+   "results":[
+      {
+         "gender":"male",
+         "name":{
+            "title":"Mr",
+            "first":"Mohammed",
+            "last":"Strauß"
+         },
+         "location":{
+            "street":{
+               "number":8343,
+               "name":"Eichenweg"
+            },
+            "city":"Hemmingen",
+            "state":"Berlin",
+            "country":"Germany",
+            "postcode":19282,
+            "coordinates":{
+               "latitude":"-40.3361",
+               "longitude":"-84.7425"
+            },
+            "timezone":{
+               "offset":"+2:00",
+               "description":"Kaliningrad, South Africa"
+            }
+         },
+         "email":"mohammed.strauss@example.com",
+         "login":{
+            "uuid":"bd8d4521-8a2d-449a-b131-04d528893f42",
+            "username":"bluebutterfly132",
+            "password":"allgood",
+            "salt":"HMjZsJOB",
+            "md5":"59207c14ae03ca031b93f60d62674d11",
+            "sha1":"23c6f7dfb2bedb68da99419a259732e95d4fbf93",
+            "sha256":"09436ae464d047025d375c40597569f7dfebdbd1eaaa1f1fb703ac61a36fbecd"
+         },
+         "dob":{
+            "date":"1958-09-07T07:19:21.517Z",
+            "age":64
+         },
+         "registered":{
+            "date":"2016-11-04T17:36:00.287Z",
+            "age":6
+         },
+         "phone":"0155-6292119",
+         "cell":"0171-0685963",
+         "id":{
+            "name":"",
+            "value":null
+         },
+         "picture":{
+            "large":"https://randomuser.me/api/portraits/men/31.jpg",
+            "medium":"https://randomuser.me/api/portraits/med/men/31.jpg",
+            "thumbnail":"https://randomuser.me/api/portraits/thumb/men/31.jpg"
+         },
+         "nat":"DE"
+      }
+   ],
+   "info":{
+      "seed":"cde68e97c38bbef9",
+      "results":1,
+      "page":1,
+      "version":"1.3"
+   }
+}</code></pre>
+
+<p>2) Create an object which represents a subset of the data returned by that API. In the case of Pydantic, my definition of the DTOs look like this:</p>
+
+<pre>
+<code class="language-python">from pydantic import BaseModel, AnyUrl
+
+
+class PydanticAddress(BaseModel):
+    street: str
+    city: str
+    postcode: str
+
+
+class PydanticExample(BaseModel):
+    name: str
+    address: PydanticAddress
+    age: int
+    avatar: AnyUrl</code></pre>
+
+<p>Note that one class is nested inside the other.&nbsp;</p>
+
+<p><br />
+3) Have a parsing function which takes care of the un-seemly fiddling around.&nbsp;</p>
+
+<pre>
+<code class="language-python">def parse_to_dto(json, dto_class, dto_class_address):
+    return dto_class(
+        name=json["results"][0]["name"]["title"]
+        + " "
+        + json["results"][0]["name"]["first"]
+        + " "
+        + json["results"][0]["name"]["last"],
+        address=dto_class_address(
+            street=str(json["results"][0]["location"]["street"]["number"])
+            + " "
+            + json["results"][0]["location"]["street"]["name"],
+            city=json["results"][0]["location"]["city"],
+            postcode=json["results"][0]["location"]["postcode"],
+        ),
+        age=json["results"][0]["dob"]["age"],
+        avatar=json["results"][0]["picture"]["thumbnail"],
+    )</code></pre>
+
+<p>4) Have a template which reads from the DTO:</p>
+
+<pre>
+<code class="language-html">&lt;ul&gt;
+    &lt;li&gt;{{ object.name }}&lt;/li&gt;
+    &lt;li&gt;{{ object.address.street }} {{ object.address.city }} {{ object.address.postcode }}&lt;/li&gt;
+    &lt;li&gt;This person is {{ object.age }} years old&lt;/li&gt;
+    &lt;li&gt;{{ object.avatar }}&lt;/li&gt;
+    &lt;li&gt;The Dataclass was {{ size }} bytes&lt;/li&gt;
+&lt;/ul&gt;
+</code></pre>
+
+<p><br />
+The entire view for the Pydantic endpoint looks like:&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-python">def pydantic_view(request):
+    response = requests.get("https://randomuser.me/api/")
+    parsed = parse_to_dto(response.json(), PydanticExample, PydanticAddress)
+    return TemplateResponse(
+        request, "comparison.html", {"object": parsed, "size": getsizeof(parsed)}
+    )</code></pre>
+
+<p>You will have noticed from the template and view&nbsp;that I am using the <a href="https://docs.python.org/3/library/sys.html">sys module&#39;s getsizeof function</a>&nbsp;to&nbsp;measure the size of the DTO in memory.</p>
+
+<p>In a really basic Django app, I&#39;ve hooked up routes and views for Pydantic, Attrs, TypedDict,<a href="https://docs.python.org/3/library/collections.html#collections.namedtuple"> Named Tuple</a> and <a href="https://www.python.org/dev/peps/pep-0557/">Data Classes</a>.&nbsp;</p>
+
+<hr />
+<p>I used the <a href="https://github.com/tarekziade/salvo">Salvo</a> load testing tool to the measure speed. I&rsquo;m not especially interested in how it behaves under load, but given that there is an (unpredictable) network call in amongst all of this, the fairest thing to do seems to be to make a lot of syncronous requests, and then Salvo will be able to calculate an average length of the request/response cycle.</p>
+
+<p>With the app running on my local host, Salvo can be run like so:&nbsp;</p>
+
+<pre>
+<code class="language-bash">salvo http://127.0.0.1:8000/pydantic/ --concurrency 1 --requests 100
+</code></pre>
+
+<h3><u><strong>The Results:&nbsp;</strong></u></h3>
+
+<table border="1" cellpadding="1" cellspacing="1" style="width:500px;">
+	<thead>
+		<tr>
+			<th scope="col">DTO</th>
+			<th scope="col">Average Response Time (seconds)</th>
+			<th scope="col">Size (bytes)</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<td>Pydantic</td>
+			<td>0.2175</td>
+			<td>48</td>
+		</tr>
+		<tr>
+			<td>Attrs</td>
+			<td>0.2153</td>
+			<td>72</td>
+		</tr>
+		<tr>
+			<td>DataClass</td>
+			<td>0.2083</td>
+			<td>48</td>
+		</tr>
+		<tr>
+			<td>TypedDict</td>
+			<td>0.2636</td>
+			<td>232</td>
+		</tr>
+		<tr>
+			<td>NamedTuple</td>
+			<td>0.2135</td>
+			<td>72</td>
+		</tr>
+		<tr>
+			<td style="background-color: rgb(119, 119, 119);">&nbsp;</td>
+			<td style="background-color: rgb(119, 119, 119);">&nbsp;</td>
+			<td style="background-color: rgb(119, 119, 119);">&nbsp;</td>
+		</tr>
+		<tr>
+			<td>StandardClass</td>
+			<td>0.2226</td>
+			<td>48</td>
+		</tr>
+	</tbody>
+</table>
+
+<p>The &#39;Standard&#39; class was defined like so:&nbsp;</p>
+
+<pre>
+<code class="language-python">class StandardAddress:
+    def __init__(self, street,city,postcode):
+        self.street = street
+        self.city = city
+        self.postcode = postcode
+
+class StandardExample:
+    def __init__(self, name,address,age,avatar):
+        self.name = name
+        self.address = address
+        self.age = age
+        self.avatar = avatar</code></pre>
+
+<p>So both the 3rd party options come in at faster than a standard class (beat only by plain DataClasses), with Attrs having a slightly larger memory footprint. Typed Dicts seem significantly slower/ bigger.&nbsp;</p>
+
+<hr />
+<p>This overall approach feels a bit &lsquo;hacky&rsquo; to me. I&rsquo;m effectively using a load testing tool to profile an application. This got me thinking, was there a different approach; where I could analyse what is going on in the code, in a more granular and less crude way?&nbsp;The package <a href="https://pypi.org/project/django-cprofile-middleware/">django-cprofile-middleware </a>seemingly fits the bill. If I add the middleware into my project, I can get stats for different parts of the call stack. It will, in effect, tell me how long the program spends in each part of the code.</p>
+
+<p>After pip installing it, I amend my projects settings:&nbsp;</p>
+
+<pre>
+<code class="language-python"># settings.py
+
+...
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    
+    # New! 
+    "django_cprofile_middleware.middleware.ProfilerMiddleware",
+]
+
+DJANGO_CPROFILE_MIDDLEWARE_REQUIRE_STAFF = False
+
+...</code></pre>
+
+<p>Now if I start the Django development server, I can hit any endpoint and the addition of a &lsquo;prof&rsquo; query param to the URL, will return the stats to me.<br />
+&nbsp;</p>
+
+<p><img height="1490" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/05/10/screenshot-2022-05-10-at-164310.png" width="1398" /></p>
+
+<p><br />
+In order to get a grasp of what the middleware is doing, lets focus on the &lsquo;cumtime&rsquo; column, representing the &lsquo;cumulative time&rsquo; spent in a function, (so <strong>also</strong> any time spent &#39;in&#39;&nbsp;functions called from <em>within </em>that function). If we&nbsp;examine the Pydantic endpoint, sorted by cumulative time, <a href="http://127.0.0.1:8000/pydantic/?prof&amp;sort=cumtime">http://127.0.0.1:8000/pydantic/?prof&amp;sort=cumtime</a> , we see the &lsquo;pydantic_view&rsquo; view at the very top. This is expected, as the view is responsible for the entire request and response cycle. Everything else we are measuring&nbsp;happens &lsquo;within&rsquo; that view.</p>
+
+<p><img height="360" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/05/10/image.png" width="996" /></p>
+
+<p>Another thing worth examining&nbsp;here is that the call with the next largest cumulative time is from the requests package, and it&rsquo;s only 0.001 seconds less than everything else that happens in the view (so the parsing and DTO initialisation), so we can see that far and away the biggest amount of&nbsp;overhead is coming from the call to the external API.</p>
+
+<p>If I sort by &lsquo;tottime&rsquo; (i.e the total time spent per function, irrespective of sub-calls),&nbsp;we can confirm that all the parts of the program which are actually the slowest, are all related to making the http call, as suspected. This is true of the faster or slower DTOs as diagnosed by my Salvo script.</p>
+
+<p><img height="580" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/05/10/image_3j0j1ZZ.png" width="1406" /></p>
+
+<p>&nbsp;</p>
+
+<p>So far, django-cprofile-middleware seems to be pointing me to the fact thathat the differences are negligible.</p>
+
+<p>Here are some decent tutorials relating to django-cprofile-middleware:</p>
+
+<ul>
+	<li>
+	<p>&nbsp;</p>
+
+	<div id="1611"><a href="https://medium.com/kami-people/profiling-in-django-9f4d403a394f">Profiling in Django by Farhan Azmi&nbsp;</a></div>
+	</li>
+	<li>
+	<p>&nbsp;</p>
+
+	<p><a href="https://cfpb.github.io/consumerfinance.gov/profiling-django/">Consumer Financial Protection Bureau website guide</a></p>
+
+	<p>&nbsp;</p>
+	</li>
+</ul>
+
+<p>It is often used in conjunction with the&nbsp;<a href="https://jiffyclub.github.io/snakeviz/">SnakeViz</a> viewer to produce a GUI for inspecting the results (detailed in both the above posts).&nbsp;</p>
+
+<hr />
+<p>Given the extra functionality* one can get with Pydantic and Attrs, I&#39;d say that they were well-worth using, especially as there seems to be little speed difference when compared to the standard lib offerings, (despite the crude nature of my benchmarking).&nbsp;</p>
+
+<p>*I&#39;ve deliberately avoided discussion those &#39;extra&#39; functionalities here, but some excellent articles can be found below, which discuss the feature sets of the options explored in greater depth.&nbsp;</p>
+
+<p id="dataclasses-vs-attrs-vs-pydantic"><a href="https://jackmckew.dev/dataclasses-vs-attrs-vs-pydantic.html">Dataclasses vs Attrs vs Pydantic</a> by Jack McKew</p>
+
+<p><a href="https://dev.to/izabelakowal/some-ideas-on-how-to-implement-dtos-in-python-be3">7 ways to implement DTOs in Python...</a> by Izabela Kowal</p>
+
+<p><a href="https://www.attrs.org/en/stable/why.html">Why not...</a> from the Attrs docs<br />
+<br />
+It would appear to me that Attrs raison d&#39;etre is to help people write classes more easily. The standard library&#39;s Data Class was created as a response to this same problem, but Attrs remains more extensible. Pydantic&#39;s main focus is data validation and parsing. NamedTuple and TypedDicts are fundemanetally <em>those </em>kinds of datasructures under the hood, its just that they can just be defined with a &#39;<em>class-like</em>&#39; syntax. So to summarize,&nbsp;&nbsp;if you want to write cleaner classes and only care about speed, use Data Classes. If you think you might care about more than speed in the future, use Attrs.&nbsp;&nbsp;If you want parsing, validating and much more, (alongside everything else), Pydantic is the way to go!&nbsp;</p>
+
+<hr />
+<p>For my test I was using Python 3.8.9 and the versions of the key libraries was:&nbsp;</p>
+
+<pre>
+<code class="language-bash">attrs==21.4.0
+Django==4.0.2
+pydantic==1.9.0
+requests==2.27.1
+salvo==0.2
+</code></pre>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="/blog/trying-out-django-ninja-part-2/">Trying Out Django Ninja - Part 2</a></li>
+            
+              <li><a href="/blog/trying-out-django-ninja/">Trying Out Django Ninja - Part 1</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/05d1b67c-c08c-492f-a3fa-bea3f02f6f46/";
+this.page.identifier = "05d1b67c-c08c-492f-a3fa-bea3f02f6f46";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/vagrant/" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/systemd/" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/wsgi/" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/rest/" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/tornado/" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-db-queue/" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/docker/" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/authentication/" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/react/" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/portfolio/" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/flask/" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/integration/" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-ninja/" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/apache/" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/dto/" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/celery/" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/mongodb/" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/gunicorn/" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/web-framework/" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/s3/" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/salvo/" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/workflows/" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/nginx/" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django_1/" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bottle/" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypy_1/" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/attrs/" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-rest-framework/" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/webtest/" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/api/" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/proxy/" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/jenkins/" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/automation/" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pymongo/" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bulma/" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypi/" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pydantic/" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/allauth/" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/oauth/" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="/static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

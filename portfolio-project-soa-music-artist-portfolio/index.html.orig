@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="/">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="/about/">About</a>
+        <a class="p-2 text-muted" href="/blog/">Blog</a>
+        <a class="p-2 text-muted" href="/blog/portfolio">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">SOA musical artist portfolio</h2>
+    <p class="blog-post-meta">Dec. 13, 2020, 4:53 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="/blog/tag/django_1/">
+          Django
+        </a>
+        , 
+      
+        <a href="/blog/tag/rest/">
+          REST
+        </a>
+        , 
+      
+        <a href="/blog/tag/api/">
+          API
+        </a>
+        , 
+      
+        <a href="/blog/tag/portfolio/">
+          Portfolio
+        </a>
+        , 
+      
+        <a href="/blog/tag/react/">
+          React
+        </a>
+        
+      
+    </p>
+    <p>Recently, I found myself with two problems: 1) I needed to learn service-oriented architecture and 2) I had promised to build my brother a website for his musical projects. I figured I would solve both of these at once, by creating a portolio site using a React frontend and a Django REST framework backend.&nbsp;<br />
+<br />
+I&#39;ve played in bands since I was a teenager and getting a website for your project usually involves the same steps: bending whatever blogging platform is&nbsp;most popular at the time to fit the requirements. These requirements have&nbsp;remained the same since (seemingly) the beggining of time:</p>
+
+<ul>
+	<li>A news feed with prominence (you want people to see the most recent thing you&#39;ve been upto).</li>
+	<li>A discography with lots of detail.&nbsp;</li>
+	<li>An image library.</li>
+	<li>Links to whatever the dominant platforms are for hosting your music. This would&#39;ve been Myspace when I was younger, but now there is a much bigger ecosystem, encompassing Spotify, Bandcamp, Soundcloud and many others.&nbsp;</li>
+</ul>
+
+<p>This last point is key. There are numerous platforms that music fans expect to see your content on. Differences in distribution deals and record label&#39;s preferences can lead to a musical artists prescence being patchy across the different platforms.&nbsp;The center piece of my CMS (if you can even call it that... micro-CMS?) needs to be a discography that can serve&nbsp;as a central&nbsp;<em>&#39;jumping off point&#39;</em> to all the other services, where the actual music will be hosted.&nbsp;</p>
+
+<p><a href="https://github.com/pj-simpson/band_website">Github repository</a><br />
+&nbsp;</p>
+
+<p>Discography page:&nbsp;<br />
+<br />
+<br />
+<img src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2020/12/13/screen-shot-2020-12-13-at-164651.png" style="width: 750px; height: 355px;" /><br />
+<br />
+Admin sub-menu, showing the form for new release entries. The admin pages are essentially a series of extensive forms.&nbsp;<br />
+<br />
+<br />
+<img src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2020/12/13/screen-shot-2020-12-13-at-164932.png" style="width: 450px; height: 545px;" /><br />
+<br />
+Documentation of the endpoint:&nbsp;<br />
+<br />
+<img src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2020/12/13/screenshot-from-2020-12-13-17-24-25.png" style="width: 750px; height: 420px;" /><br />
+<br />
+<iframe allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="" frameborder="0" height="315" src="https://www.youtube.com/embed/cH0VKyAJcT4" width="560"></iframe></p>
+
+<p>&nbsp;</p>
+
+<p>Simulating a slow network connection to see the infinite scoll on the news feed:&nbsp;<br />
+<br />
+<img height="797" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2020/12/13/scroll.gif" width="630" /><br />
+<br />
+<br />
+Suite of Cypress end-to-end tests:&nbsp;</p>
+
+<p><iframe allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="" frameborder="0" height="315" src="https://www.youtube.com/embed/KaVJkvP7MLo" width="560"></iframe></p>
+
+<p>&nbsp;</p>
+
+<hr />
+<p>&nbsp;</p>
+
+<p>Deployment of the project posed a bit of a mystery. There are plenty of blogs out there about intergrating a React frontend with a Django backend, in developerment, but precious little about best practises for the infrastructure once you want to go live. In the end, I opted to utilize Docker Compose on a DigitalOcean droplet. Compose spins up an Nginx container, which is then routing requests to either the front or backend. The container with the webserver is also taking care of certbot. It seems to be working fairly well so far. The more I search on the topic, I have yet to see anyone indicate that this is the wrong approach.&nbsp;</p>
+
+<p><a href="https://testdriven.io/courses/taxi-react/">This course</a>, from testdriven.io was helpful implementing the authentication via JWT.&nbsp;</p>
+
+<p>I next plan to add an &#39;Events/Calendar&#39; page, but seeing as we are currently in the middle of coronavirus and there are no live performances, this wasnt the most pressing functionality to add!&nbsp;<br />
+I may develop the back-end seperately as a&nbsp;&#39;headless CMS&#39; and once that is more mature, use it to try out some different frontend frameworks (Vue, Backbone, etc). I have many friends who are musicians,&nbsp;so it would be a nice challenge to deploy the same back-end for each, but build a completely different client-side application, based on what they want their site to look like.&nbsp;</p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="/blog/portfolio-project-legal-tech-saas-integration/">CRM &amp; Integration</a></li>
+            
+              <li><a href="/blog/vdr-platform-s3-connector/">VDR Platform - S3 Connector</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/bbb9f251-555d-45ab-b7e6-4404b3d8b0d2/";
+this.page.identifier = "bbb9f251-555d-45ab-b7e6-4404b3d8b0d2";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/vagrant/" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/systemd/" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/wsgi/" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/rest/" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/tornado/" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-db-queue/" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/docker/" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/authentication/" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/react/" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/portfolio/" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/flask/" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/integration/" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-ninja/" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/apache/" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/dto/" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/celery/" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/mongodb/" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/gunicorn/" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/web-framework/" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/s3/" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/salvo/" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/workflows/" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/nginx/" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django_1/" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bottle/" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypy_1/" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/attrs/" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-rest-framework/" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/webtest/" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/api/" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/proxy/" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/jenkins/" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/automation/" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pymongo/" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bulma/" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypi/" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pydantic/" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/allauth/" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/oauth/" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="/static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../../static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="../../static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="../../index.html">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../index.html">About</a>
+        <a class="p-2 text-muted" href="../index.html">Blog</a>
+        <a class="p-2 text-muted" href="../portfolio.html">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">A Tour of Tornado (Part 1)</h2>
+    <p class="blog-post-meta">June 9, 2022, 9:49 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="../tag/tornado/index.html">
+          Tornado
+        </a>
+        
+      
+    </p>
+    <p>I stumbled across this blog post entitled &lsquo;<a href="https://thehftguy.com/2020/10/27/my-experience-in-production-with-flask-bottle-tornado-and-twisted/'">My Experience In Production with: Flask, Bottle, Tornado and&nbsp;Twisted&#39;</a>, by &#39;The HFT Guy&#39; (whoever that may be!?) and&nbsp;it made for a fascinating read. As someone who has come from the WSGI world (Django, Flask,&nbsp;etc), it was somewhat surprising to see a blog about Python web frameworks&nbsp;which declares that Tornado is &lsquo;the only reasonable choice for web development&rsquo;.&nbsp;Tornado represented a bit of an unknown for me. If you were to search for&nbsp;Django/Flask, or even FastAPI jobs in your local area, (ok nearest &lsquo;<i>tech hub&rsquo;</i>) there will undoubtedly be a lot of results.&nbsp;If you refine that same search to Tornado, you&rsquo;ll be lucky to find a handful.</p>
+
+<p>As developers we always want to think we have the best tools for the jobs, so this entertaining and opinionated blog post peaked my interest enough to give Tornado a little whirl.</p>
+
+<h2><u><strong>What is Tornado?</strong></u></h2>
+
+<p>Tornado describes itself as a &lsquo;&hellip;web framework <b>and</b> asynchronous networking library&hellip;&rsquo;, so from the outset it&#39;s clear that Tornado is not simply there to <b><i>only</i></b> build traditional CRUD type apps. While this tutorial will focus on the Web Application Framework part of Tornado, its docs give equal precedent to this, along with its HTTP Server &amp; Client, networking tools and asynchronous programming utilities. Crucially, the framework is <b>not</b> a WSGI framework, so there is no requirement to run something like Gunicorn et al. between the app and the web server.</p>
+
+<p><a href="https://www.tornadoweb.org/en/stable/web.html">The official &#39;Hello World&#39; app</a><br />
+&nbsp;</p>
+
+<pre>
+<code class="language-python">import tornado.ioloop
+import tornado.web
+
+class MainHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write("Hello, world")
+
+def make_app():
+    return tornado.web.Application([
+        (r"/", MainHandler),
+    ])
+
+if __name__ == "__main__":
+    app = make_app()
+    app.listen(8888)
+    tornado.ioloop.IOLoop.current().start()</code></pre>
+
+<p>For &#39;controllers&#39; (or &#39;view&#39; as they are more commonly called in Python), the convention in Tornado is to sub-class the web framework&rsquo;s Request Handler and then override it&rsquo;s various methods. Here, a &lsquo;get&rsquo; method will respond to get requests. The request handler&rsquo;s write method, &lsquo;<i>Writes the given chunk to the output buffer</i>&rsquo;. So far, so good&hellip;</p>
+
+<p>The make_app() function returns a Web Application object, initialised with a Tuple consisting of a raw string (to accommodate regular expressions) and the handler Object. Obviously this is a mapping: requests whose path matches the regex will be passed to the correct handler.</p>
+
+<p>In the main program, the make_app() method is called, it is set to listen on port 8888, (which starts an HTTP Server) and then finally, the Tornado IOLoop is started, which will run forever, (until stopped).</p>
+
+<p>Its worth re-iterating at this point that Tornado is not a WSGI framework, so doesn&rsquo;t require a WSGI or Dev server in-front of it. The way that you are running the Python process here, is analogous to how it would get run on a production server, (albeit with a Web-server/ reverse proxy)&hellip; I&rsquo;ll cover this in more detail in a part 2 blog post.</p>
+
+<p>Here is another trivial example which shows off a few more of Tornado&rsquo;s features:</p>
+
+<pre>
+<code class="language-python">import tornado.ioloop
+import tornado.options
+import tornado.web
+
+from tornado.options import define, options
+
+define("port", default=8000, type=int)
+
+class MainHandler(tornado.web.RequestHandler):
+    def get(self,word):
+        resp = {'The word is': word}
+        self.write(resp)
+
+if __name__ == "__main__":
+    tornado.options.parse_command_line()
+    app = tornado.web.Application(handlers=[(r"/print/(\w+)", MainHandler)])
+    app.listen(options.port)
+    tornado.ioloop.IOLoop.instance().start()</code></pre>
+
+<p>The first thing different here is that we are importing from Tornado&rsquo;s options module, which is used for Command line parsing.&nbsp;</p>
+
+<pre>
+<code class="language-python">from tornado.options import define, options</code></pre>
+
+<blockquote>
+<p>&lsquo;&rsquo;&hellip;Options must be defined with&nbsp;<a href="https://www.tornadoweb.org/en/stable/options.html#tornado.options.define"><b>tornado.options.define</b></a>&nbsp;before use, generally at the top level of a module. The options are then accessible as attributes of&nbsp;<a href="https://www.tornadoweb.org/en/stable/options.html#tornado.options.options"><b>tornado.options.options</b></a>:...&#39;&#39;</p>
+</blockquote>
+
+<pre>
+<code class="language-python">...
+
+define("port", default=8000, type=int)
+
+tornado.options.parse_command_line()
+
+...
+
+app.listen(options.port)</code></pre>
+
+<p>These lines of code ensure that when the app starts, it&rsquo;s HTTPServer will listen on any port as defined in the command line, falling back to a default of 8000 if no arguments are supplied.&nbsp;If we wish, the program could now be run on a different port like so:</p>
+
+<pre>
+<code class="language-python">python app.py —port=5000 
+</code></pre>
+
+<p>This is important because when we want to come to deploy the application, we will likely run multiple instances&nbsp;each listening on different ports and then use &lsquo;<em>something</em>&rsquo; in front to distribute load across the different processes.</p>
+
+<p>The next most interesting thing about this enhanced script, is that we are coming good on the regex matching. &lsquo;(\w+)&rsquo; will capture any word after /print/, and then that pattern match is presumed to be a parameter we can then access as the second argument in the Handler&rsquo;s get method.</p>
+
+<p>If we examine the applications response in Postman, we can see its &lsquo;magically&rsquo; a JSON response. This is because for the write method, &lsquo;<em>If the given chunk is a dictionary, we write it as JSON and set the Content-Type of the response to be&nbsp;</em><b><em>application/json</em>&rsquo;.</b></p>
+
+<p><img height="912" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/06/09/screenshot-2022-05-11-at-141940.png" width="1448" /><b> </b><br />
+That&rsquo;s pretty handy! With this nifty feature, it should be clear how quickly one could get some JSON API endpoints up and running with Tornado.</p>
+
+<h2><u><strong>Templating</strong></u></h2>
+
+<p>So what if you wanted to create a full stack web app? How do we get Tornado to give us a &lsquo;template&rsquo; response?&nbsp;Here is an example:</p>
+
+<pre>
+<code class="language-python">import tornado.ioloop
+import tornado.options
+import tornado.web
+
+from tornado.options import define, options
+
+define("port", default=8000, type=int)
+
+class TemplateHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.render("example.html")
+
+if __name__ == "__main__":
+    tornado.options.parse_command_line()
+    settings = {"template_path": "templates"}
+    app = tornado.web.Application(handlers=[(r"/", TemplateHandler)],**settings)
+    app.listen(options.port)
+    tornado.ioloop.IOLoop.instance().start()</code></pre>
+
+<p>So the main difference here is that we are using the RequestHandler&rsquo;s &lsquo;render&rsquo; method rather than write, which takes an html file&rsquo;s name as an arg. According to the docs, render, &lsquo;Renders the template with the given arguments as the response.&rsquo; Which takes us nicely onto the Tornado templating language. We can give keyword arguments to the render method and then manipulate them via Tornado&rsquo;s templating language.</p>
+
+<pre>
+<code class="language-python">import tornado.ioloop
+import tornado.options
+import tornado.web
+import requests
+
+from tornado.options import define, options
+
+define("port", default=8000, type=int)
+
+class DomainsHandler(tornado.web.RequestHandler):
+    def get(self,word):
+        response = requests.get(f"https://api.domainsdb.info/v1/domains/search?page=1&amp;limit=10&amp;domain={word}")
+        self.render("domains.html",search_word=word
+,**response.json())
+
+if __name__ == "__main__":
+    tornado.options.parse_command_line()
+    settings = {"template_path": "templates"}
+    app = tornado.web.Application(handlers=[(r"/domains/(\w+)", DomainsHandler)], **settings)
+    app.listen(options.port)
+    tornado.ioloop.IOLoop.instance().start()</code></pre>
+
+<p>If we examine this new app&rsquo;s handlers, we can see that we are capturing any word after &lsquo;/domains/&lsquo; in the path. I&rsquo;ve installed the trusty <a href="https://pypi.org/project/requests/">requests</a> library and am making a call to a service I found called <a href="https://domainsdb.info/">https://domainsdb.info/</a>, which allows you to search for information about domain names, (documentation <a href="https://api.domainsdb.info/v1/">here</a>). The path parameter gets searched against the domains API and its response is unpacked as keyword arguments passed to the render method.</p>
+
+<p>A snippet of the API JSON response looks like this:&nbsp;</p>
+
+<pre>
+<code class="language-json">{
+  "domains": [
+    {
+      "domain": "peter-ammon.ch",
+      "create_date": "2022-05-05T05:58:35.510068",
+      "update_date": "2022-05-06T06:06:38.292103",
+      "country": "US",
+      "isDead": "False",
+      "A": [
+        "185.230.63.107",
+        "185.230.63.186",
+        "185.230.63.171"
+      ],
+      "NS": [
+        "ns12.wixdns.net",
+        "ns13.wixdns.net"
+      ],
+      "CNAME": null,
+      "MX": [
+        {
+          "exchange": "mx2.mail.hostpoint.ch",
+          "priority": 10
+        }
+      ],
+      "TXT": null
+    },
+
+...
+</code></pre>
+
+<p>And the HTML template looks like:&nbsp;</p>
+
+<pre>
+<code class="language-html">&lt;html&gt;
+   &lt;head&gt;
+      &lt;title&gt;Tornado serving a Template&lt;/title&gt;
+   &lt;/head&gt;
+   &lt;body&gt;
+   &lt;h1&gt;Domain Search&lt;/h1&gt;
+   &lt;p&gt;The word was {{ search_word }}&lt;/p&gt;
+   &lt;hr/&gt;
+   {% for dom in domains %}
+         &lt;h3&gt;{{ dom['domain'] }}&lt;/h3&gt;
+        &lt;table&gt;
+            &lt;tr&gt;
+                &lt;th&gt;Created Date&lt;/th&gt;
+                &lt;th&gt;Expiry Date&lt;/th&gt;
+            &lt;/tr&gt;
+            &lt;tr&gt;
+                &lt;td&gt;
+                    {% set created = datetime.datetime.fromisoformat(dom['create_date']) %}
+                    {{ created.strftime('%d-%m-%Y') }}
+                &lt;/td&gt;
+                &lt;td&gt;
+                    {% set updated = datetime.datetime.fromisoformat(dom['update_date']) %}
+                    {{ updated.strftime('%d-%m-%Y') }}
+                &lt;/td&gt;
+            &lt;/tr&gt;
+        &lt;/table&gt;
+    {% end %}
+   &lt;/body&gt;
+ &lt;/html&gt;
+</code></pre>
+
+<p>The results of the two together:&nbsp;</p>
+
+<p><img src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/06/10/screenshot-2022-06-10-at-233923.png" style="width: 550px; height: 646px;" /></p>
+
+<p>More so than the <a href="https://docs.djangoproject.com/en/4.0/ref/templates/language/">Django template language</a>, or <a href="https://jinja.palletsprojects.com/en/3.1.x/">Jinja2</a> (widely used in the world of Python), it seems to me that the <a href="https://www.tornadoweb.org/en/stable/template.html">Tornado Templating language</a> makes more of a virtue of it being &lsquo;Python in an HTML&rsquo; template. The Tornado docs state &rsquo;<em>A Tornado template is just HTML (or any other text-based format) with Python control sequences and expressions embedded within the markup&rsquo;</em>. Contrast that with the Django docs which state:</p>
+
+<blockquote>
+<p>&lsquo;&nbsp;&hellip;&nbsp;you&rsquo;ll want to bear in mind that the Django template system is not simply Python embedded into HTML. This is by design: the template system is meant to express presentation, not program logic.</p>
+
+<p>The Django template system provides tags which function similarly to some programming constructs &ndash; an&nbsp;<a href="https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatetag-if"><b>if</b></a>&nbsp;tag for boolean tests, a&nbsp;<a href="https://docs.djangoproject.com/en/4.0/ref/templates/builtins/#std:templatetag-for"><b>for</b></a>&nbsp;tag for looping, etc. &ndash; but these are not simply executed as the corresponding Python code, and the template system will not execute arbitrary Python expressions. Only the tags, filters and syntax listed below are supported by default (although you can add&nbsp;<a href="https://docs.djangoproject.com/en/4.0/howto/custom-template-tags/">your own extensions</a>&nbsp;to the template language as needed).&rsquo;</p>
+</blockquote>
+
+<p>So whereas in Django or Jinja2, you&rsquo;ll see nested objects accessed with dot notation, in Tornado you can see the Python dictionary &lsquo;key-name-square-brackets&rsquo;&nbsp; way of accessing the values:</p>
+
+<pre>
+<code class="language-html">…
+
+{% for dom in domains %}
+
+      &lt;h3&gt;{{ dom['domain'] }}&lt;/h3&gt;
+
+…</code></pre>
+
+<p>If its wrapped in double curly brackets: its an expression. If its wrapped in curly brackets and percentages, its a control statement.</p>
+
+<p><a href="https://www.tornadoweb.org/en/stable/guide/templates.html">Some Tornado modules and even Python standard library modules</a> are available in the Tornado Templating Language. You can see we make use of <em>datetime</em> to convert a string to a datetime object (&lsquo;set&#39; is required to declare a variable), so that we can then reformat it.</p>
+
+<pre>
+<code class="language-html">…
+&lt;td&gt;
+    {% set created = datetime.datetime.fromisoformat(dom['create_date']) %}
+    {{ created.strftime('%d-%m-%Y') }}
+&lt;/td&gt;
+… </code></pre>
+
+<p>How did Tornado know where to look for the template? Take a look at these bits of the code from the app.py file:</p>
+
+<pre>
+<code class="language-python">...
+
+settings = {"template_path": "templates"}
+
+…
+
+app = tornado.web.Application(handlers=[(r"/domains/(\w+)", DomainsHandler)], **settings)</code></pre>
+
+<p>&#39;Settings&#39; are just a dictionary which can be unpacked into the Application, when initialising.The same can be done for static resources:</p>
+
+<pre>
+<code class="language-python">settings = {
+    "template_path": "templates",
+    "static_path": "static",
+}</code></pre>
+
+<pre>
+<code>app.py
+| - static
+    | - domain.css
+| - templates
+    | - domain.html</code></pre>
+
+<p>Once the files are arranged like above, we can call the <em>static_url</em> helper method in our template, which will return&nbsp;the URL for the resource, relative to the file path defined in settings.</p>
+
+<pre>
+<code class="language-html">&lt;link rel="stylesheet" href="{{ static_url(“domain.css") }}"&gt;</code></pre>
+
+<p>&nbsp;</p>
+
+<h2><u><strong>Native Http Client</strong></u></h2>
+
+<p>We&#39;re using the requests library but, as has already been hinted at, Tornado has its own Http Client. Can we use this instead? Yes, but we need to refactor the code slightly so that it uses the <a href="https://docs.python.org/3/library/asyncio-task.html">async/await syntax</a>. This isnt a Python &amp; concurrency tutorial, so I wont go into that here, but I got the below working, after <a href="https://stackoverflow.com/questions/54440350/python-asynchttpclient-inside-tornado-requesthandler-throws-exception">reading this stackoverflow post</a>&nbsp;along with generous timeout parameters.&nbsp;&nbsp;</p>
+
+<pre>
+<code class="language-python">import tornado.ioloop
+import tornado.options
+import tornado.web
+import json
+from tornado.httpclient import AsyncHTTPClient
+
+from tornado.options import define, options
+
+define("port", default=8000, type=int)
+
+class DomainsHandler(tornado.web.RequestHandler):
+    async def get(self,word):
+        http_client = AsyncHTTPClient()
+        response = await http_client.fetch(f"https://api.domainsdb.info/v1/domains/search?page=1&amp;limit=10&amp;domain={word}")
+        http_client.close()
+        response_dict = json.loads(response.body.decode('utf-8'))
+        await self.render("domains.html",search_word=word,**response_dict)
+
+if __name__ == "__main__":
+    tornado.options.parse_command_line()
+    settings = {"template_path": "templates"}
+    app = tornado.web.Application(handlers=[(r"/domains/(\w+)", DomainsHandler)], **settings)
+    app.listen(options.port)
+    tornado.ioloop.IOLoop.instance().start()
+</code></pre>
+
+<h2><u><strong>UI Modules.</strong></u></h2>
+
+<p>Whilst the Tornado Templating Language does support template inheritance (like Django and Jinja2), it has its own cool &lsquo;<a href="http://tornadoweb.org/en/stable/guide/templates.html#ui-modules">UI Modules&rsquo;</a> concept, which allows for the creation of reusable components.</p>
+
+<p>Take the above example, whereby we loop through all the domains and show a table for each one. We could break up the template and consider each &lsquo;item&rsquo; in that loop as a separate UI Module, moving some of the logic out of the template, and back into a class in our pure Python code, (there is a school of thought which believes that presentational logic and business logic shouldn&rsquo;t mix, of course, but that&#39;s another conversation!)</p>
+
+<pre>
+<code class="language-python">...
+
+class DomainModule(tornado.web.UIModule): 
+    def render(self, dom):
+        name = dom['domain']
+        created = datetime.datetime.fromisoformat(dom['create_date'])
+        updated = datetime.datetime.fromisoformat(dom['update_date'])
+        return self.render_string(‘modules/domain.html', name=name,created=created,updated=updated)</code></pre>
+
+<p>&nbsp;</p>
+
+<p>We&rsquo;ve created a class which extends Tornado Web&rsquo;s UIModule. Its render method accepts a &lsquo;dom&rsquo;, i.e the information for a single&nbsp;domain and we are grabbing its name, created and updated dates and performing the necessary transforms.&nbsp;The settings are then&nbsp;updated like so, giving the UIModule an alias.</p>
+
+<pre>
+<code class="language-python">settings = {"template_path": "templates", "static_path":"static", "ui_modules": {"Domain": DomainModule}}</code></pre>
+
+<p>And the loop in domains.html now does this:</p>
+
+<pre>
+<code class="language-python">{% for dom in domains %}
+     {% module Domain(dom) %}
+ {% end %}</code></pre>
+
+<p>As you would expect we now have a new html file for the UIModule,(as referenced in the render_string call), which resembles the body of the loop previously in domains.html:</p>
+
+<pre>
+<code class="language-html">&lt;h3&gt;{{ name }}&lt;/h3&gt;
+&lt;table id="domains"&gt;
+    &lt;tr&gt;
+        &lt;th&gt;Created Date&lt;/th&gt;
+        &lt;th&gt;Expiry Date&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;
+            {{ created.strftime('%d-%m-%Y') }}
+        &lt;/td&gt;
+        &lt;td&gt;
+            {{ updated.strftime('%d-%m-%Y') }}
+        &lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;</code></pre>
+
+<p>We&rsquo;ve taken out a lot of the datetime faffing-around and put that in the UIModule&rsquo;s Python code, but this is still Python, so the values passed in as &lsquo;created&rsquo; and &lsquo;updated&rsquo; and datetime objects and we can call strftime() on them. I guess this is arguably presentational, so the aforementioned purists&nbsp;will be happy!</p>
+
+<p>You can even break up your static assets with the javascript_files, or&nbsp;css_files methods, into more manageable chunks. If I rename my css file &lsquo;main.css&rsquo; and move all the stuff to alter the appearance of the table into &lsquo;domain-detail.css&rsquo;, I can alter the UIModule class like so:</p>
+
+<pre>
+<code class="language-python">class DomainModule(tornado.web.UIModule):
+    def render(self, dom):
+        name = dom['domain']
+        created = datetime.datetime.fromisoformat(dom['create_date'])
+        updated = datetime.datetime.fromisoformat(dom['update_date'])
+        return self.render_string('modules/domain.html', name=name,created=created,updated=updated)
+
+    def css_files(self):
+        return ‘domain-detail.css'</code></pre>
+
+<p>With the sprinkling in of some (very bad) CSS, the&nbsp;App is currently looking like this:&nbsp;</p>
+
+<p><img src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/06/13/screenshot-2022-06-13-at-233606.png" style="width: 1200px; height: 957px;" /><br />
+<br />
+There is even the option to inject javascript and css code directly into the template rendered, from the UI Module, with the embedded_css or&nbsp;embedded_javascript methods.&nbsp;</p>
+
+<p>Just a trivial example to demonstrate JS,&nbsp;If I take this out of the template:</p>
+
+<pre>
+<code class="language-html">&lt;p&gt;The word was {{ search_word }}&lt;/p&gt;</code></pre>
+
+<p>I might decide that I&nbsp;really want to insist the user of this terrible app is confronted with the word that they have searched, via a popup.</p>
+
+<pre>
+<code class="language-python">...
+
+class SubHeadingModule(tornado.web.UIModule):
+    def render(self, word):
+        self.word = word
+
+    def embedded_javascript(self):
+        return f'window.alert("The word searched was: " + "{self.word}");'
+
+...
+
+settings = {
+        "template_path": "templates",
+        "static_path": "static",
+        "ui_modules": {"Domain": DomainModule, "SubHeading":SubHeadingModule},
+    }
+
+...</code></pre>
+
+<pre>
+<code class="language-html">&lt;html&gt;
+   &lt;head&gt;
+    &lt;link rel="stylesheet" href="{{ static_url("main.css") }}"&gt;
+    &lt;title&gt;Tornado serving a Template&lt;/title&gt;
+   &lt;/head&gt;
+   &lt;body&gt;
+   &lt;div id="header"&gt;
+       &lt;h1&gt;Domain Search&lt;/h1&gt;
+   &lt;/div&gt;
+   &lt;div id="subheading" hidden&gt;
+      {% module SubHeading(search_word) %}
+   &lt;/div&gt;
+   &lt;hr/&gt;
+   {% for dom in domains %}
+        {% module Domain(dom) %}
+    {% end %}
+    &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+<p><img height="241" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/06/15/screenshot-2022-06-15-at-180909.png" width="785" /><br />
+<br />
+Now when the page loads, we get a popup to click on. All that behaviour is controlled by JavaScript embedded via a UI module in our Python code. Writing out JS as strings would probably get a bit tedious for more complex apps, it seems far more likely to me that the <em>_files</em> methods would be useful. Having said that, the trend in a lot of web development at the moment it to opt for &lsquo;s<em>prinklings</em>&rsquo; of JavaScript, rather than a fully blown decoupled front-end, so who knows? At any rate, I think the Tornado Templating language and its UI Module concept is very cool and allows for a great flexibility for Python developers to fold in JS, CSS, HTML via files or otherwise!<br />
+&nbsp;</p>
+
+<h2><u><strong>CONCLUDING THOUGHTS</strong></u></h2>
+
+<p>I do actually get it: the HFT Guy is right! The way Tornado encourages you to structure your projects feels addictive and intuitive, and (to me) it makes a nice contrast to the dominant patterns you see in a lot of other Python web frameworks. I&rsquo;ll undoubtedly try and incorporate it into a non-trivial project.<br />
+<br />
+I intend to write a part 2 of this tutorial relating to deployment. Watch this space!<br />
+&nbsp;</p>
+
+<p><a href="https://github.com/pj-simpson/basic-tornado">Github Repository</a></p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="../a-tour-of-tornado-part-2/index.html">A Tour Of Tornado (Part 2)</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/68585d0a-67bd-46c6-a8e5-004ff795de75/";
+this.page.identifier = "68585d0a-67bd-46c6-a8e5-004ff795de75";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/vagrant/index.html" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/systemd/index.html" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/wsgi/index.html" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/rest/index.html" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/tornado/index.html" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-db-queue/index.html" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/docker/index.html" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/authentication/index.html" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/react/index.html" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/portfolio/index.html" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/flask/index.html" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/integration/index.html" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-ninja/index.html" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/apache/index.html" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/dto/index.html" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/celery/index.html" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/mongodb/index.html" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/gunicorn/index.html" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/web-framework/index.html" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/s3/index.html" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/salvo/index.html" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/workflows/index.html" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/nginx/index.html" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django_1/index.html" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bottle/index.html" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypy_1/index.html" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/attrs/index.html" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-rest-framework/index.html" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/webtest/index.html" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/api/index.html" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/proxy/index.html" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/jenkins/index.html" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/automation/index.html" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pymongo/index.html" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bulma/index.html" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypi/index.html" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pydantic/index.html" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/allauth/index.html" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/oauth/index.html" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="../../static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

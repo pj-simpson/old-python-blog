@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../../static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="../../static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="../../index.html">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../index.html">About</a>
+        <a class="p-2 text-muted" href="../index.html">Blog</a>
+        <a class="p-2 text-muted" href="../portfolio.html">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">Trying Out Django Ninja - Part 1</h2>
+    <p class="blog-post-meta">Jan. 2, 2021, 7:46 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="../tag/django_1/index.html">
+          Django
+        </a>
+        , 
+      
+        <a href="../tag/rest/index.html">
+          REST
+        </a>
+        , 
+      
+        <a href="../tag/api/index.html">
+          API
+        </a>
+        , 
+      
+        <a href="../tag/django-ninja/index.html">
+          Django Ninja
+        </a>
+        , 
+      
+        <a href="../tag/django-rest-framework/index.html">
+          Django REST Framework
+        </a>
+        
+      
+    </p>
+    <h1><u>INTRODUCTION</u></h1>
+
+<p><a href="https://django-ninja.rest-framework.com/">Django Ninja </a>is a new and exciting framework for building REST APIs in Django. I still consider myself at the beggining of my journey with Python and Django, and having read a couple of <a href="https://leanpub.com/djangoforapis">excellent books </a>on <a href="https://www.packtpub.com/free-ebook/django-restful-web-services/9781788833929">Django REST Framework</a>, I was somewhat disheartened to see a few grumblings here and there, (in the various forums which I lurk),&nbsp;about DRF&#39;s speed.&nbsp;</p>
+
+<p>Coupled with the emergence of <a href="https://fastapi.tiangolo.com/" target="_blank">FastAPI</a> as the &#39;<em>hot new thing&#39;</em> in Python web development, I was beggining to believe that going forward, if I were to build an http service, it would be unlikely to involve Django. This would&#39;ve been&nbsp;a shame, given my investment in learning that particular framework, so I was understandbly excited to see Django Ninja appear, as it claims to be&nbsp;heavily inspired by FastAPI and also has some encouraging performance metrics (image taken from: https://django-ninja.rest-framework.com/).<br />
+<br />
+<img alt="Django Ninja REST Framework" src="https://django-ninja.rest-framework.com/img/benchmark.png" /><br />
+<br />
+The following is effectively a begginer tutorial&nbsp;for Django Ninja and then in the second part,&nbsp;i&#39;ll try and recreate exactly the same with Django REST Framework by way&nbsp;of a comparison.&nbsp;<br />
+<br />
+NOTE: The intended audience here is a beginner, so I will not be covering Django Ninja&#39;s Async capabilities. If&nbsp;you are interested in those, please see <a href="https://django-ninja.rest-framework.com/async-support/">the docs</a>.</p>
+
+<h1><u>PART 1: DJANGO NINJA</u></h1>
+
+<p><br />
+Create your Django project with your preffered type of virtual environment and then create an app for the ninja api, (I&#39;ve called mine ninja_service)</p>
+
+<pre>
+<code class="language-bash">python manage.py startapp ninja_service</code></pre>
+
+<p>...and then dont forget to add the app into the Django project&#39;s settings:&nbsp;</p>
+
+<pre>
+<code class="language-python"># api_comparison/settings.py
+
+...
+
+INSTALLED_APPS = [
+
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+
+    "ninja_service.apps.NinjaServiceConfig",
+
+    ]
+
+...</code></pre>
+
+<p>We are going to create a &#39;<a href="https://www.discogs.com/">Discogs</a>&#39; style service for musical artists. We will have &#39;Projects&#39; and &#39;Releases&#39;</p>
+
+<pre>
+<code class="language-python"># ninja_service/models.py
+from django.db import models
+
+class Project(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(null=True)
+
+class Release(models.Model):
+
+    title = models.CharField(max_length=255)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    press_release = models.TextField(null=True)
+    release_date = models.DateField()</code></pre>
+
+<p>We are assuming that the musical&nbsp;artist represented by the service&nbsp;will have multiple projects and then each of these projects will, in turn, have many releases. A project will need to be identifiable by name, with an optional description.&nbsp;</p>
+
+<p>The relationship between a release and it&#39;s project is a ForeignKey field and the date of release is a DateField. Lets make the migrations:&nbsp;</p>
+
+<pre>
+<code class="language-bash">python manage.py makemigrations 
+</code></pre>
+
+<p>Which should result in:&nbsp;</p>
+
+<pre>
+<code class="language-bash">Migrations for 'ninja_service':
+  ninja_service/migrations/0001_initial.py
+    - Create model Project
+    - Create model Release
+</code></pre>
+
+<p>...and apply them:&nbsp;</p>
+
+<pre>
+<code class="language-bash">python manage.py migrate</code></pre>
+
+<p>Now we are ready to install Django Ninja&nbsp;and create the API endpoints:</p>
+
+<pre>
+<code class="language-bash">pip install django-ninja==0.10.2</code></pre>
+
+<p>DN reccomends making an <a href="https://django-ninja.rest-framework.com/tutorial/routers/">api.py file for each module in your project.</a> Create one under the ninja_service folder and lets start off with the &#39;Create&#39; function, (seeing as we are making a CRUD app):&nbsp;</p>
+
+<pre>
+<code class="language-python"># ninja_service/api.py
+
+from ninja import NinjaAPI,Schema
+from .models import Project
+
+api = NinjaAPI()
+
+class ProjectIn(Schema):
+    name: str
+    description: str = None
+
+@api.post("/projects")
+def create_project(request,payload:ProjectIn):
+    project = Project.objects.create(**payload.dict())
+    return {"message": f"successfully created project id: {project.id}"}</code></pre>
+
+<p>The key things here are the <a href="https://django-ninja.rest-framework.com/tutorial/body/#import-schema">Schema class </a>and the <a href="https://django-ninja.rest-framework.com/tutorial/#defining-operation-methods">@api decorator.</a> The first thing you may be drawn to in this file is the Schema Class. Its worth Mentioning here that a Schema in Django Ninja is actually a <a href="https://pydantic-docs.helpmanual.io/">Pydantic model</a>. Pydantic is primarily a validation library (massive over simiplification alert!), so the primary job of&nbsp;ProjectIn schema here is to check the data passed into the system conforms to the types we expect. Description on our model can be null, so I&#39;ve set it to None as the default value, which means that the attribute will be optional in the request body.&nbsp;The decorator designates the route to the function as well as the http verb that the view will be accepting.&nbsp;</p>
+
+<p>If we go to our project level urls.py file:&nbsp;</p>
+
+<pre>
+<code class="language-python">from django.contrib import admin
+from django.urls import path
+from ninja_service.api import api
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('ninja-api/',api.urls),
+]
+</code></pre>
+
+<p><br />
+We can see that the routes passed to the api decorators means that Django Ninja&nbsp;gathers all the urls for us and we can set it simply with &#39;api.urls&#39;. The other cool thing that the framework is doing, is automatically creating the OpenAPI documentation. Visit&nbsp;<a href="http://127.0.0.1:8000/ninja-api/docs">http://127.0.0.1:8000/ninja-api/docs</a> and you should see:&nbsp;</p>
+
+<p><img height="412" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2021/01/03/screen-shot-2021-01-03-at-134939.png" width="1357" /><br />
+<br />
+Now lets move onto the &#39;Read&#39; function next. It should be pretty self explanatory:&nbsp;</p>
+
+<pre>
+<code class="language-python"># ninja_service/api.py
+
+from django.shortcuts import get_object_or_404
+
+class ProjectOut(Schema):
+    id: int
+    name: str
+    description: str = None
+
+@api.get("/projects/{project_id}",response=ProjectOut)
+def get_project(request,project_id:int):
+    project = get_object_or_404(Project,id=project_id)
+    return project</code></pre>
+
+<p>We create a different Schema for the Read operation, because we want to return the id that the system automatically assigns the object when we create it. Note the use of the Django shortcut and that we now have a parameter in our URL route.&nbsp;<br />
+<br />
+Posting some data:</p>
+
+<pre>
+<code class="language-bash">curl -X POST "http://127.0.0.1:8000/ninja-api/projects" -H  "Content-Type: application/json" -d "{"name":"Project Number 1","description":"This is the first project"}"</code></pre>
+
+<pre>
+<code class="language-bash">{
+  "message": "successfully created project id: 1"
+}</code></pre>
+
+<p>Retrieving some data:</p>
+
+<pre>
+<code class="language-bash">curl -X GET "http://127.0.0.1:8000/ninja-api/projects/1" -H  "accept: application/json"</code></pre>
+
+<pre>
+<code class="language-bash">{
+  "id": 1,
+  "name": "Project Number 1",
+  "description": "This is the first project"
+}</code></pre>
+
+<p>Now lets move onto the &#39;U&#39; (update) part of our CRUD operations. Initally I created two functions like so:&nbsp;</p>
+
+<pre>
+<code class="language-python">@api.put("/projects/{project_id}")
+def full_update_project(request,project_id:int,payload: ProjectIn):
+    project = get_object_or_404(Project, id=project_id)
+    for attr,value in payload.dict().items():
+        setattr(project,attr,value)
+    project.save()
+    return {"message": f"successfully updated project id: {project.id}"}
+
+@api.patch("/projects/{project_id}")
+def partial_update_project(request,project_id:int,payload: ProjectIn):
+    project = get_object_or_404(Project, id=project_id)
+    for attr,value in payload.dict().items():
+        setattr(project,attr,value)
+    project.save()
+    return {"message": f"successfully updated project id: {project.id}"}
+</code></pre>
+
+<p>One function is for a total update of an object (put) and one for a partial update (patch). We are iterating over the payload&#39;s dict method (<a href="https://django-ninja.rest-framework.com/tutorial/crud/#update">as suggested in the DN docs</a>) and using setattr to save the new attributes to the already existing model. However, if we try and update the<strong> description only</strong> on our project we encounter a 422 error.<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">curl -X PATCH "http://127.0.0.1:8000/ninja-api/projects/1"  -H  "Content-Type: application/json" -d "{"description":"update description only"}"
+</code></pre>
+
+<pre>
+<code class="language-python">{
+  "detail": [
+    {
+      "loc": [
+        "body",
+        "payload",
+        "name"
+      ],
+      "msg": "field required",
+      "type": "value_error.missing"
+    }
+  ]
+}</code></pre>
+
+<p>OK, so the fact that &#39;name&#39; in our ProjectIn schema doesnt have a None default, is preventing a partial update from taking place. Our Schema is expecting a name.&nbsp;<br />
+<br />
+Lets make a schema just for updating, where we set every attribute with a default of None, to allow for PATCHING:<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-python">class ProjectUpdate(Schema):
+    name: str = None
+    description: str = None</code></pre>
+
+<p><br />
+So if we run our same call now, we get a 500 error.&nbsp;<br />
+Looking at the stack trace we can see:&nbsp;</p>
+
+<pre>
+<code class="language-bash">django.db.utils.IntegrityError: NOT NULL constraint failed: ninja_service_project.name
+</code></pre>
+
+<p><br />
+So the error is now happening at the database level. Our code is trying to push a null value to the objects name, despite us only wanting to update the description. A default of &#39;None&#39; in a schema is a default value, not an instruction to be skipped when we are looping through those values, even during a patch operation (remember what Pydantic is!). We can add a simple check to get our code to work as intended and our two update functions now look like:&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-python">@api.put("/projects/{project_id}")
+def full_update_project(request,project_id:int,payload: ProjectIn):
+    project = get_object_or_404(Project, id=project_id)
+    for attr,value in payload.dict().items():
+        setattr(project,attr,value)
+    project.save()
+    return {"message": f"successfully updated project id: {project.id}"}
+
+@api.patch("/projects/{project_id}")
+def partial_update_project(request,project_id:int,payload: ProjectUpdate):
+    project = get_object_or_404(Project, id=project_id)
+    for attr,value in payload.dict().items():
+        if value:
+            setattr(project,attr,value)
+    project.save()
+    return {"message": f"successfully updated project id: {project.id}"}</code></pre>
+
+<p>The patch function now uses a different Schema, meaning it can accept no value for any attribute.&nbsp;Our PATCH request now works:&nbsp;</p>
+
+<pre>
+<code class="language-bash">curl -X PATCH "http://127.0.0.1:8000/ninja-api/projects/1" -H  "accept: */*" -H  "Content-Type: application/json" -d "{"description":"Description only"}"
+</code></pre>
+
+<pre>
+<code class="language-json">{
+  "message": "successfully updated project id: 1"
+}</code></pre>
+
+<p>Despite these two differences, these two functions look pretty similar and have introduced a fair bit of redundancy into the project. <a href="https://django-ninja.rest-framework.com/tutorial/#defining-operation-methods">Single functions can handle multiple methods </a>in Django Ninja, so&nbsp;we can actually refactor both put and patch&nbsp;into this:&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-python">@api.api_operation(['PUT','PATCH'],"/projects/{project_id}")
+def update_project(request,project_id:int,payload: ProjectUpdate):
+    project = get_object_or_404(Project, id=project_id)
+    for attr,value in payload.dict().items():
+        if value:
+            setattr(project,attr,value)
+    project.save()
+    return {"message": f"successfully updated project id: {project.id}"}</code></pre>
+
+<p>I suppose this means that PUT and PATCH are now effectively interchangable, but its not uncommon in REST APIs that I have worked with for PUT to handle both complete and partial updates, so I can live with this!</p>
+
+<p>Test out a PUT request for good measure:&nbsp;</p>
+
+<pre>
+<code class="language-bash">curl -X PUT "http://127.0.0.1:8000/ninja-api/projects/1" -H  "accept: */*" -H  "Content-Type: application/json" -d "{"name":"Project 1 renamed","description":"another new description"}"
+</code></pre>
+
+<pre>
+<code class="language-json">{
+  "message": "successfully updated project id: 1"
+}</code></pre>
+
+<p>To round this all this off, lets make a delete function and another &#39;get&#39; function which returns a list of projects, as opposed to just a single object.&nbsp;&nbsp;</p>
+
+<pre>
+<code class="language-python">@api.delete("/projects/{project_id}")
+def delete_project(request, project_id: int):
+    project = get_object_or_404(Project, id=project_id)
+    project.delete()
+    return {"message": f"successfully deleted project id: {project.id}"}
+
+@api.get("/projects",response=List[ProjectOut])
+def list_projects(request):
+    qs = Project.objects.all()
+    return qs</code></pre>
+
+<p>Delete is pretty self-explanatory, however notice that we are wrapping the &#39;ProjectOut&#39; Schema in &#39;List&#39;, to indicate that we will be returning a list of objects which confirm to that particular Schema. A succesful reponse body to called that endpoint might look like:<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-json">[
+  {
+    "id": 1,
+    "name": "Project  1",
+    "description": "blah"
+  },
+  {
+    "id": 2,
+    "name": "Project  2",
+    "description": "blah"
+  },
+  {
+    "id": 3,
+    "name": "Project  3",
+    "description": "blah"
+  }
+]</code></pre>
+
+<p>Try adding more projects so you can meaningfully test the Project List endpoint and then also try deleting a project. Again, I&#39;ve been using <a href="https://curl.se/">cURL</a> here for examples as it feels suitably &#39;universal&#39;, but feel free to use <a href="http://127.0.0.1:8000/ninja-api/docs">the docs</a> or a tool like <a href="https://www.postman.com/">Postman</a> or the excellent <a href="https://httpie.io/">HTTPie</a>.&nbsp;</p>
+
+<p>One last thing to do, before we move onto the more complex release model, is look again at the docs page.&nbsp;<br />
+<br />
+<img height="468" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2021/01/03/screen-shot-2021-01-03-at-143640.png" width="588" /><br />
+<br />
+You will notice that each endpoint is lumped under &#39;default&#39;, which looks bad. Thankfully Django Ninja provides a <a href="https://django-ninja.rest-framework.com/tutorial/operation_params/#tags">way of organising via &#39;tagging&#39; the functions</a>. Just pass tags=[&#39;tag name&#39;] into the decorator.&nbsp;<br />
+Your ninja_service/api.py file should now look like:&nbsp;</p>
+
+<pre>
+<code class="language-python">from typing import List
+
+from ninja import NinjaAPI,Schema
+from django.shortcuts import get_object_or_404
+from .models import Project
+
+api = NinjaAPI()
+
+class ProjectIn(Schema):
+    name: str
+    description: str = None
+
+class ProjectUpdate(Schema):
+    name: str = None
+    description: str = None
+
+class ProjectOut(Schema):
+    id: int
+    name: str
+    description: str
+
+@api.post("/projects", tags=["projects"])
+def create_project(request,payload:ProjectIn):
+    project = Project.objects.create(**payload.dict())
+    return {"message": f"successfully created project id: {project.id}"}
+
+@api.get("/projects/{project_id}",response=ProjectOut, tags=["projects"])
+def get_project(request,project_id:int):
+    project = get_object_or_404(Project,id=project_id)
+    return project
+
+@api.api_operation(['PUT','PATCH'],"/projects/{project_id}", tags=["projects"])
+def update_project(request,project_id:int,payload: ProjectUpdate):
+    project = get_object_or_404(Project, id=project_id)
+    for attr,value in payload.dict().items():
+        if value:
+            setattr(project,attr,value)
+    project.save()
+    return {"message": f"successfully updated project id: {project.id}"}
+
+
+@api.delete("/projects/{project_id}", tags=["projects"])
+def delete_project(request, project_id: int):
+    project = get_object_or_404(Project, id=project_id)
+    project.delete()
+    return {"message": f"successfully deleted project id: {project_id}"}
+
+@api.get("/projects",response=List[ProjectOut], tags=["projects"])
+def list_projects(request):
+    qs = Project.objects.all()
+    return qs</code></pre>
+
+<p>With the docs&nbsp;nicely organised under &#39;projects&#39;:&nbsp;<br />
+<br />
+<img height="790" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2021/01/03/screen-shot-2021-01-03-at-144219.png" width="1339" /><br />
+<br />
+Now lets move onto our slightly more complex Release model.&nbsp;<br />
+<br />
+We might&nbsp;be tempted to replicate exactly the same strcture, with the only change&nbsp;of note being that in the ReleaseOut Schema, we are going to nest the ProjectOut schema.&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-python">from .models import Release
+from datetime import date
+
+...
+
+class ReleaseIn(Schema):
+    title: str
+    project: int
+    press_release: str = None
+    release_date: date
+
+class ReleaseUpdate(Schema):
+    title: str = None
+    project: int = None
+    press_release: str = None
+    release_date: date = None
+
+class ReleaseOut(Schema):
+    id: int
+    title: str
+    project: ProjectOut = None
+    press_release: str = None
+    release_date: date
+    
+@api.post("/releases", tags=["releases"])
+def create_release(request,payload:ReleaseIn):
+    release = Release.objects.create(**payload.dict())
+    return {"message": f"successfully created release id: {release.id}"}
+
+@api.get("/releases/{release_id}",response=ReleaseOut, tags=["releases"])
+def get_release(request,release_id:int):
+    release = get_object_or_404(Release,id=release_id)
+    return release
+
+@api.api_operation(['PUT','PATCH'],"/releases/{release_id}", tags=["releases"])
+def update_release(request,release_id:int,payload: ReleaseUpdate):
+    release = get_object_or_404(Release, id=release_id)
+    for attr, value in payload.dict().items():
+        if value:
+            setattr(release, attr, value)
+    release.save()
+    return {"message": f"successfully updated release id: {release.id}"}
+
+@api.delete("/releases/{release_id}", tags=["releases"])
+def delete_release(request, release_id: int):
+    release = get_object_or_404(Release, id=release_id)
+    release.delete()
+    return {"message": f"successfully deleted project id: {release.id}"}
+
+@api.get("/releases",response=List[ReleaseOut], tags=["releases"])
+def list_releases(request):
+    qs = Release.objects.all()
+    return qs</code></pre>
+
+<p>&nbsp;</p>
+
+<p>Lets try and get a POST request working...<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">curl -X POST "http://127.0.0.1:8000/ninja-api/releases" -H  "accept: */*" -H  "Content-Type: application/json" -d "{"title":"Totally New Release","project":1,"press_release":"Blah Blah Blah","release_date":"2021-02-14"}"</code></pre>
+
+<p>Immediately upon trying to create a release this way, we see another 500 error. If I check the terminal where I typed my &#39;runserver&#39; command I can see clearly:</p>
+
+<pre>
+<code class="language-bash">ValueError: Cannot assign "1": "Release.project" must be a "Project" instance.</code></pre>
+
+<p>This is at the database level again. In our code we are passing the project&#39;s foreign key to Release.objects.create(), however we need to be more explicit, (<a href="https://django-ninja.rest-framework.com/tutorial/crud/#update">The DN docs also suggest this, if need be</a>), and actually fetch the User object we need in this case. We can use that Django &#39;get_object_or_404&#39; shortcut again.&nbsp;&nbsp;</p>
+
+<p>Our Create Release now looks like this:&nbsp;</p>
+
+<pre>
+<code class="language-python">@api.post("/releases", tags=["releases"])
+def create_release(request, payload: ReleaseIn):
+    release = Release.objects.create(
+        project=get_object_or_404(Project, id=payload.project),
+        title=payload.title,
+        press_release=payload.press_release,
+        release_date=payload.release_date,
+    )
+    return {"message": f"successfully created release id: {release.id}"}</code></pre>
+
+<p>This gets the Create request passing:<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">{
+  "message": "successfully created release id: 1"
+}</code></pre>
+
+<p>This of course also means we will need to update the UPDATE function:&nbsp;</p>
+
+<pre>
+<code class="language-python">@api.api_operation(["PUT", "PATCH"], "/releases/{release_id}", tags=["releases"])
+def update_release(request, release_id: int, payload: ReleaseUpdate):
+    release = get_object_or_404(Release, id=release_id)
+    if payload.project:
+        release.project = get_object_or_404(Project, id=release.project.id)
+    if payload.title:
+        release.title = payload.title
+    if payload.press_release:
+        release.press_release = payload.press_release
+    if payload.release_date:
+        release.release_date = payload.release_date
+    release.save()
+    return {"message": f"successfully updated release id: {release.id}"}
+
+</code></pre>
+
+<p>Hmmm things are starting to look a little less elegant now, but lets test that it at least works and we can revist for a better solution another time:&nbsp;</p>
+
+<pre>
+<code class="language-bash">curl -X PUT "http://127.0.0.1:8000/ninja-api/releases/1" -H  "accept: */*" -H  "Content-Type: application/json" -d "{"title":"New Name For Release","project":1,"press_release":"Rah Rah Rah","release_date":"2022-02-15"}"</code></pre>
+
+<pre>
+<code class="language-bash">curl -X PATCH "http://127.0.0.1:8000/ninja-api/releases/1" -H  "accept: */*" -H  "Content-Type: application/json" -d "{"title":"Patched Title"}"</code></pre>
+
+<p>...these now both work:</p>
+
+<pre>
+<code class="language-bash">{
+  "message": "successfully updated release id: 1"
+}</code></pre>
+
+<p><br />
+The final thing I want to do here is provide some pagination for the release list. In our final app, whilst we assume the musical artist has a fairly small number of projects, we expect them to have a lot of releases, so we will paginate the results.</p>
+
+<p>In Django REST Framework&#39;s &#39;<a href="https://www.django-rest-framework.org/api-guide/pagination/#pagenumberpagination">Page Number</a>&#39; Pagination, lists of objects are returned under &#39;results&#39; , with information about the pagination at the very top like so:&nbsp;</p>
+
+<pre>
+<code class="language-json">{
+    "count": 120
+    "next": "https://example.com/examples/?page=3",
+    "previous": "https://example.com/examples/?page=1",
+    "results": [
+       {"example":"value"},
+       {"example":"value"},
+       {"example":"value"},
+       .... and so on.
+    ]
+}</code></pre>
+
+<p>We are going to aim to recreate something simiar for our app&#39;s releases list. we will create a new Paginated Schema, wrapping the nested ReleaseOut schema in List[], which will give us a list of objects conforming to that particular schema.&nbsp;<br />
+<br />
+Import <a href="https://docs.djangoproject.com/en/3.1/ref/paginator/">Django&#39;s Paginator Class,</a>&nbsp;as well as creating a new Schema:&nbsp;</p>
+
+<pre>
+<code class="language-python">from django.core.paginator import Paginator
+
+...
+
+class PaginatedReleaseOut(Schema):
+    total_releases: int
+    total_pages: int
+    per_page : int
+    has_next: bool
+    has_previous: bool
+    results: List[ReleaseOut] = None</code></pre>
+
+<p><br />
+I have now updated the function like so:&nbsp;</p>
+
+<pre>
+<code class="language-python">@api.get("/releases",response=PaginatedReleaseOut, tags=["releases"])
+def list_releases(request,page:int=1):
+    releases = Release.objects.all()
+    paginator = Paginator(releases,3)
+    page_number = page
+    page_object = paginator.get_page(page_number)
+    response = {}
+    response["total_releases"] = page_object.paginator.count
+    response["total_pages"] = page_object.paginator.num_pages
+    response["per_page"] = page_object.paginator.per_page
+    response["has_next"] = page_object.has_next()
+    response["has_previous"] = page_object.has_previous()
+    response["results"] = [i for i in page_object.object_list.values()]
+    return response</code></pre>
+
+<p>Notice how there is&nbsp;now a &#39;page&#39; <a href="https://django-ninja.rest-framework.com/tutorial/query-params/">Query Parameter&nbsp;</a>being passed to the function. This defaults to 1 , as we assume that if no parameter is passed, we will want to begin &#39;at the start&#39;. After that,&nbsp;we configure the paginator and build the response, culminating in a list comprehension to create the nested list of release objects.&nbsp;</p>
+
+<p>Add in enough,(i.e more than 3), releases so we can meaningfully test it.<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">http://127.0.0.1:8000/ninja-api/releases?page=1
+</code></pre>
+
+<pre>
+<code class="language-json">{
+  "total_releases": 5,
+  "total_pages": 2,
+  "per_page": 3,
+  "has_next": true,
+  "has_previous": false,
+  "results": [
+    {
+      "id": 1,
+      "title": "Release 1",
+      "project": 1,
+      "press_release": "My Release",
+      "release_date": "2021-02-15"
+    },
+    {
+      "id": 2,
+      "title": "Release 2",
+      "project": 1,
+      "press_release": "blah blah blah",
+      "release_date": "2021-02-16"
+    },
+    {
+      "id": 3,
+      "title": "Release 3",
+      "project": 1,
+      "press_release": "blah",
+      "release_date": "2021-02-17"
+    }
+  ]
+}</code></pre>
+
+<pre>
+<code class="language-bash">http://127.0.0.1:8000/ninja-api/releases?page=2</code></pre>
+
+<pre>
+<code class="language-json">{
+  "total_releases": 5,
+  "total_pages": 2,
+  "per_page": 3,
+  "has_next": false,
+  "has_previous": true,
+  "results": [
+    {
+      "id": 4,
+      "title": "Release 4",
+      "project": 1,
+      "press_release": "blah bleh bleh",
+      "release_date": "2021-02-18"
+    },
+    {
+      "id": 5,
+      "title": "Release 5",
+      "project": 1,
+      "press_release": "blah",
+      "release_date": "2021-02-19"
+    }
+  ]
+}</code></pre>
+
+<p>This seems to work fine, (it returns a successful response and results), but if we look in our Terminal again:&nbsp;</p>
+
+<pre>
+<code class="language-bash">UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list: &lt;class 'ninja_service.models.Release'&gt; QuerySet.</code></pre>
+
+<p><br />
+We need to explicitly order our releases. In this situation it entirely makes sense to order our artist&#39;s release by their release date:&nbsp;</p>
+
+<pre>
+<code class="language-python">@api.get("/releases",response=PaginatedReleaseOut, tags=["releases"])
+def list_releases(request,page:int=1):
+    releases = Release.objects.all().order_by('-release_date')
+
+...</code></pre>
+
+<p>Now we can retireve a list of releases without Django throwing a warning!&nbsp;</p>
+
+<p>The Docs that Django Ninja generated for us should now look like this:&nbsp;</p>
+
+<p><img height="958" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2021/01/03/screen-shot-2021-01-03-at-160902.png" width="1648" /><br />
+&nbsp;</p>
+
+<p>Thats a good place to wrap up this guide! You can <a href="https://github.com/pj-simpson/django-ninja-tutorial/blob/main/ninja_service/api.py">check the full api.py file on Github</a>. I really enjoyed teaching myself the basics of Django Ninja. Right before discovering the framework, I had just read Luke Plant&#39;s <a href="https://spookylukey.github.io/django-views-the-right-way/">thought provoking article on Django Views</a>, and was very much &#39;in the mood&#39; for function based views. Whilst that article is actually very complimentary about Django REST Framework&#39;s Generic Class Based Views, CBVs in general could be argued to provide to greater level of abstraction nessecary for both a beginnner, or someone coming to a project midway through.&nbsp;Class based views are currently less of a thing in Django Ninja and whilst t<a href="https://django-ninja.rest-framework.com/proposals/cbv/">hat might change in the future,</a>&nbsp; Django&#39;s docs define&nbsp;a view as &#39;<em>a Python function that takes a Web request and returns a Web response</em>&#39;, so <em>really</em> you dont need anything much more than that! Django Ninja is a ready to go framework which will help you&nbsp;create Open API documented, Pydantic validated and Fast APIs.&nbsp;<br />
+<br />
+In <a href="index.html">Part 2,</a> I will build this exact set-up again, but using Django REST-Framework and its generic CBVs, just so that if you have followed along with this tutorial, you can try the other way of doing things and compare!&nbsp;</p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="../trying-out-django-ninja-part-2/index.html">Trying Out Django Ninja - Part 2</a></li>
+            
+              <li><a href="../django-allauth-custom-provider/index.html">Django Allauth Custom Provider</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/c324c040-4e3f-48c0-b3cb-289316e3419e/";
+this.page.identifier = "c324c040-4e3f-48c0-b3cb-289316e3419e";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/vagrant/index.html" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/systemd/index.html" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/wsgi/index.html" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/rest/index.html" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/tornado/index.html" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-db-queue/index.html" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/docker/index.html" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/authentication/index.html" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/react/index.html" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/portfolio/index.html" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/flask/index.html" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/integration/index.html" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-ninja/index.html" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/apache/index.html" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/dto/index.html" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/celery/index.html" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/mongodb/index.html" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/gunicorn/index.html" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/web-framework/index.html" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/s3/index.html" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/salvo/index.html" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/workflows/index.html" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/nginx/index.html" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django_1/index.html" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bottle/index.html" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypy_1/index.html" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/attrs/index.html" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-rest-framework/index.html" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/webtest/index.html" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/api/index.html" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/proxy/index.html" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/jenkins/index.html" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/automation/index.html" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pymongo/index.html" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bulma/index.html" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypi/index.html" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pydantic/index.html" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/allauth/index.html" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/oauth/index.html" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="../../static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

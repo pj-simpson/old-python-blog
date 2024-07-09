@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../../static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="../../static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="../../index.html">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../index.html">About</a>
+        <a class="p-2 text-muted" href="../index.html">Blog</a>
+        <a class="p-2 text-muted" href="../portfolio.html">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">Building an API Proxy with Bottle</h2>
+    <p class="blog-post-meta">Jan. 30, 2022, 6:45 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="../tag/rest/index.html">
+          REST
+        </a>
+        , 
+      
+        <a href="../tag/api/index.html">
+          API
+        </a>
+        , 
+      
+        <a href="../tag/integration/index.html">
+          Integration
+        </a>
+        , 
+      
+        <a href="../tag/oauth/index.html">
+          OAuth
+        </a>
+        , 
+      
+        <a href="../tag/bottle/index.html">
+          Bottle
+        </a>
+        , 
+      
+        <a href="../tag/proxy/index.html">
+          Proxy
+        </a>
+        , 
+      
+        <a href="../tag/gunicorn/index.html">
+          Gunicorn
+        </a>
+        , 
+      
+        <a href="../tag/pypy_1/index.html">
+          PyPy
+        </a>
+        
+      
+    </p>
+    <p>Recently I found myself with a requirement to obfuscate some API endpoints in a particular project&#39;s source code. There were a number of reasons for this, but mainly it was because&nbsp;I was building an integration with a service whose API is proprietary and access to the API documentation was an &#39;invite only&#39; affair. Eventually I will want to check that code into a public Github repository&nbsp;as a &#39;<em>portfolio</em>&#39; item. As a way around this, I planned&nbsp;to create a very lightweight app, which I could manage separately from my main repo and run in a container, and have&nbsp;my &#39;main&#39; application make requests to it. The&nbsp;3rd party API is not directly queried, only the proxy really&nbsp;<em>knows</em> anything about it, so there is no longer any trace of its details in the repo.&nbsp;&nbsp;</p>
+
+<p>There are many Python &#39;micro&#39; frameworks, but I settled on <a href="https://bottlepy.org/docs/dev/">Bottle</a> for a number of reasons:</p>
+
+<p>1) Speed will be key here.&nbsp;I want the extra &#39;step&#39; to impinge as little as possible on the smooth running of my app. Bottle seems to be <a href="https://web-frameworks-benchmark.netlify.app/result?l=pythonvhttps://web-frameworks-benchmark.netlify.app/result?l=python">one of the quicker Python web frameworks</a>.</p>
+
+<p>2)&nbsp;All the API proxy will need to do is grab info from the incoming requests (namely, headers and query parameters), forward them onto the &#39;real&#39; API endpoints and then hand the response back. The Bottle docs display it&#39;s global <a href="https://bottlepy.org/docs/dev/api.html#the-request-object"><span style="color:blue">Request</span></a> and <a href="https://bottlepy.org/docs/dev/api.html#the-response-object"><span style="color:blue">Response</span></a>&nbsp;objects prominently in its documentation. After having skimmed&nbsp;these, I saw how easy it was to both access headers from the incoming request and set attributes on the response.&nbsp;It was settled;&nbsp;I would be using Bottle.&nbsp;<br />
+&nbsp;</p>
+
+<h2><u>Buidling in Bottle</u></h2>
+
+<p><img alt="" src="https://bottlepy.org/docs/dev/_static/logo_nav.png" style="width: 100px; height: 35px;" /></p>
+
+<p>Here is the official Bottle &#39;Hello World&#39; example:&nbsp;</p>
+
+<pre>
+<code class="language-python">from bottle import route, run, template
+
+@route('/hello/&lt;name&gt;')
+def index(name):
+    return template('&lt;b&gt;Hello {{name}}&lt;/b&gt;!', name=name)
+
+run(host='localhost', port=8080)</code></pre>
+
+<p>Ok so this looks nice and simple.&nbsp;As with many Python web frameworks, routes are declared as decorators on functions which &#39;handle&#39; the request and return a response.<br />
+<br />
+In my original &#39;monolithic&#39; app, Here is an example of how I am calling the remote system&#39;s API:&nbsp;</p>
+
+<pre>
+<code class="language-python">...
+
+def get_single_folder_details(request_user, folder_id: int):
+
+    """
+    Gets the details for a single folder from the VDR API
+
+    Makes an http call to the External Service to get a single folder,
+    sends the json response to the data parsing function.
+
+    :param request_user: the user logged in during the request
+    :param folder_id: int
+    :return: a data class for a single folders details
+
+    """
+    VDR_BASEURL = get_setting("remote_system_base_url")
+
+    access_token = SocialToken.objects.get(account__user=request_user)
+    url = f"{VDR_BASEURL}/rest/v1/folders/{folder_id}"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json",
+    }
+
+    response = requests.get(url, headers=headers)
+    result = parse_get_folder_details(response.json())
+
+    return result
+
+...</code></pre>
+
+<p><span style="font-size:11pt"><span style="line-height:normal"><span style="tab-stops:45.8pt 91.6pt 137.4pt 183.2pt 229.0pt 274.8pt 320.6pt 366.4pt 412.2pt 458.0pt 503.8pt 549.6pt 595.4pt 641.2pt 687.0pt 732.8pt"><span style="font-family:Calibri,sans-serif">A note on the use-case here. The remote system in question is a &#39;Virtual Data Room&#39; (VDR). If VDR doesn&rsquo;t make much sense, think DMS...Basically: There are files and folders.&nbsp;This function is calling an API endpoint to get details of a &#39;Folder&#39; object in the remote system. The aim here would be to have the VDR_BASEURL point at a container running my proxy, with a much more simple path:&nbsp;&nbsp;</span></span></span></span>&nbsp;</p>
+
+<pre>
+<code class="language-python">url = f"{PROXY}/folder/{folder_id}"</code></pre>
+
+<p>The request in the code above could be proxied through Bottle like so:&nbsp;</p>
+
+<pre>
+<code class="language-python">from bottle import route, run, request, response
+import requests
+
+@route("/folder/&lt;folder_id&gt;")
+def folder_details(folder_id):
+
+    # Grab the headers necessary to make the call
+
+    token = request.get_header("Authorization")
+
+    accept = request.get_header("Accept")
+
+    headers = {"Authorization": f"{token}", "Accept": f"{accept}"}
+
+    # Use the requests library to actually get the response from the external system
+
+    external_response = requests.get(
+        f"https://example.com/rest/v1/folders/{folder_id}",
+        headers=headers,
+    )
+
+    # ensure we have matching status codes, by directly setting it on the global response object
+    response.status = external_response.status_code
+
+    # Directly return the content of the response from the external system. We've already set our
+    # status code, so we can just do this and Bottle will take care of the rest (see below) 
+    return external_response.content
+
+...</code></pre>
+
+<p>Notice that inside my function, I am not explicitly passing &#39;request&#39; or &#39;response&#39; as an argument. Those are&nbsp;the global objects that the Bottle framework is making avaliable to us. request.get_header(), allows us the access the headers, as a dict-like object. The <a href="https://bottlepy.org/docs/dev/api.html#bottle.BaseResponse">BaseResponse</a> class in bottle has a number of writeable attributes, so we can set them directly.</p>
+
+<p><br />
+Bottle also does a lot of heavy lifting depending on what your functions are returning, (see the docs here on <a href="https://bottlepy.org/docs/dev/tutorial.html#generating-content">Generating Content</a>). Bottle&nbsp;will, in effect,&nbsp;always attempt to &#39;<em>do the right thing</em>&#39; . If you return a Python dictionary, it will give the client consuming your API a JSON response, etc. Bottle&#39;s flexibility in this regard was another reason why I chose it for this project.&nbsp;In the above example&nbsp;we are handing it the bytes from the request library&#39;s response object.&nbsp;</p>
+
+<p><br />
+To the client, the result doesn&#39;t look as if we&#39;ve done anything differently from call the &#39;<em>real</em>&#39; API endpoint.</p>
+
+<p><br />
+<img src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/02/08/image.png" style="width: 1000px; height: 470px;" /></p>
+
+<p><img src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/02/08/image_k5url5a.png" style="width: 1000px; height: 470px;" /><br />
+The notion of Request(s) is beginning to get a bit nebulous here, (Bottle Request? Request Lib? Are there more kinds of Requests?). In an attempt to avoid confusion, I&rsquo;m going to alias the requests library:</p>
+
+<pre>
+<code class="language-python">import requests as http_handler</code></pre>
+
+<p>I&#39;m pleased with the simplicity of my function BUT, given that I have to encapsulate about 12 different endpoints for my integration, things are going to become pretty un-DRY, pretty quickly, with regards to header retrieval and response creation. Best to split those off into some utilities:&nbsp;&nbsp;</p>
+
+<pre>
+<code class="language-python">def _prepare_request_config(request: request) -&gt; Tuple[Dict, str]:
+    token = request.get_header("Authorization")
+
+    accept = request.get_header("Accept")
+
+    headers = {"Authorization": f"{token}", "Accept": f"{accept}"}
+
+    params = request.query_string
+
+    return headers, params
+
+
+def _prepare_response_config(
+        response: response, external_response: http_handler.Response
+) -&gt; None:
+    response.set_header("Content-Type", external_response.headers["Content-Type"])
+
+    try:
+
+        response.set_header(
+            "Content-Disposition", external_response.headers["Content-Disposition"]
+        )
+
+    except KeyError:
+
+        pass
+
+    response.status = external_response.status_code</code></pre>
+
+<p>For my use-case I only need to collect query params, but this _prepare_request_config() function could easily be extended to capture the incoming request&#39;s body. _prepare_response_config() looks the way it does because I know that for the integration I am building,&nbsp;at some point&nbsp;I am going to be&nbsp;downloading files over HTTP. Note that this doesnt return anything because we dont need it to;&nbsp;&nbsp;we are mutating the global response object that Bottle has made available to our function.&nbsp;</p>
+
+<p>&nbsp;With these changes, the &#39;get folder info&#39; proxy now looks like this:&nbsp;</p>
+
+<pre>
+<code class="language-python">@route("/folder/&lt;folder_id&gt;")
+def folder_details(folder_id):
+    headers, _ = _prepare_request_config(request)
+
+    external_response = http_handler.get(
+        f"https://example.com/rest/v1/folders/{folder_id}",
+        headers=headers,
+    )
+
+    _prepare_response_config(response, external_response)
+
+    return external_response.content</code></pre>
+
+<p>I think that&rsquo;s pretty neat!&nbsp;So, I now have a single file, with about 12 of these functions, which all look pretty similar, (save for a different route decorator and external API endpoint). In terms of HTTP methods, the &#39;route&#39; decorator defaults to&nbsp;&#39;GET&#39;, so for deleting data in the remote system, my functions have an additional keyword argument:&nbsp;</p>
+
+<pre>
+<code class="language-python">@route("/soft-delete-folder/&lt;folder_id&gt;", method='DELETE')
+def folder_delete(folder_id):
+    headers, _ = _prepare_request_config(request)
+
+    external_response = http_handler.delete(
+        f"https://example.com/rest/v1/folders/{folder_id}",
+        headers=headers,
+    )
+
+...</code></pre>
+
+<p>It&#39;s worth pointing, however,&nbsp;that there are decorators for all the HTTP verbs, which can be used without the need for the additional argument:&nbsp;</p>
+
+<pre>
+<code class="language-python">@delete("/soft-delete-folder/&lt;folder_id&gt;")
+def folder_delete(folder_id):
+
+...</code></pre>
+
+<p>I&#39;ve even managed to do the <a href="https://flask-dance.readthedocs.io/en/latest/how-oauth-works.html">OAuth2 dance</a> through the proxy. See the example below. The auth() function, which accomdates OAuth2&#39;s user authorization step, shows a query param being captured from the incoming request.&nbsp;It also returns&nbsp;Bottle&#39;s&nbsp;redirect function, demonstrating the aforementioned flexibility of the framework.&nbsp;</p>
+
+<pre>
+<code class="language-python">@route("/auth")
+def auth():
+    _, params = _prepare_request_config(request)
+
+    return redirect(
+        f"https://example.com/authorization?{params}"
+    )</code></pre>
+
+<h2><u>Notes on Speed</u></h2>
+
+<p style="margin-bottom:11px">As mentioned earlier, obviously speed is going to be a consideration here . What was previously an application calling a remote service, is now&nbsp;an application, calling another application, which in turn calls the remote service. It&rsquo;s a not-insignificant extra step and it will almost certainly&nbsp;add some latency, (look again carefully at the Postman screenshots above).&nbsp;</p>
+
+<p style="margin-bottom:11px">In Python web development, async (or async-first) frameworks have rapidly ascended in popularity.&nbsp; However, there is more than enough scepticism from reputable sources, (two notable examples <a href="https://calpaterson.com/async-python-is-not-faster.html"><span style="color:blue">HERE </span></a>and <a href="https://lucumr.pocoo.org/2020/1/1/async-pressure/"><span style="color:blue">HERE</span></a>), that the asyncio module might not be a panacea for Python&#39;s speed-issues. At the very least, its much more complicated that &#39;async = faster&#39;. For where I am at in my Python journey, I don&rsquo;t feel as though I&#39;ve fully wrapped my head around asychio&#39;s API, so as things stand, (<strong><em>for me</em></strong>), the challenge of this proxy&nbsp;is a question of &#39;how fast can I get this <strong>synchronous</strong> app to run&rsquo;?</p>
+
+<p style="margin-bottom:11px">This article subtitled &#39;<a href="https://suade.org/dev/12-requests-per-second-with-python/"><span style="color:blue">A realistic look at Python web frameworks</span></a>&#39;, was incredibly influential to me when I was looking into this. I would encourage anyone to read the whole thing, but the main takeaways are:&nbsp;</p>
+
+<ol>
+	<li style="margin-bottom:11px">If you want Python itself to be faster, use <a href="https://www.pypy.org/">PyPy</a>. PyPy is an alternative implementation of Python, written in Python, with a view to making it faster. It describes itself as highly compatible, so for an app this simple, it will more than likely to run on PyPy.</li>
+	<li style="margin-bottom:11px">Properly configure the <a href="https://wsgi.readthedocs.io/en/latest/what.html">WSGI</a> Server in front of the app.</li>
+</ol>
+
+<p>Pypy can be taken care of easily enough. In the Dockerfile for my proxy, I am now pulling from the official PyPy base image:</p>
+
+<pre>
+<code class="language-bash">FROM pypy:3
+
+...
+</code></pre>
+
+<p>Let&#39;s just zoom out for a second with regards to the WSGI server configuration. I know from experience that people coming to web development and Python, (often both for the first time), probably have explained to them the fact that a WSGI server is a requirement, but they perhaps dont get lead to understand how exactly that enables an application to serve more than one request at a time.<br />
+<br />
+Taking a look at Gunicorn, (the most popular WSGI server?), it&#39;s docs describes it as having &#39;<em>...a central master process that manages a set of worker processes</em>&#39;. So, you can serve requests in parallel because you have more than one worker, right?&nbsp;Well, it&rsquo;s not as simple as &#39;<em>number of workers = the number of requests that can be handled&nbsp;at any one given time</em>&#39;. The docs state:&nbsp;&lsquo;<em>DO NOT scale the number of workers to the number of clients you expect to have</em>.&nbsp;<em>Gunicorn should only need 4-12 worker processes to handle hundreds or thousands of requests per second</em>&rsquo;, so clearly its <a href="https://docs.gunicorn.org/en/latest/design.html#how-many-workers">more nuanced than that</a>.&nbsp;</p>
+
+<p>If we go&nbsp;further down the road of Gunicorn config consideration, we learn that&nbsp;each worker itself can contain multiple threads. Threads are a further way of handling concurrency: Not only do you have multiple workers, but each worker process itself can handle multiple requests, because&nbsp;it can have&nbsp;multiple threads.</p>
+
+<p>However, looking at those Gunicorn docs, workers and threads are not &#39;<em>free</em>&#39;. You can&#39;t simply add more of each and expect not to run into issues, because, (depending on the computer&nbsp;hardware), there will always be limits. There is one last step we can take to improve on multiple workers with multiple threads, without eating up resources.&nbsp;Gunicorn can have what is known as an async worker and these uses a special kind of &#39;<em>pseudo&#39;</em> (or &#39;<em>green&#39;</em>) thread, which is computationally less demanding.</p>
+
+<p>Going back to the docs: &#39;&#39;<em>...any web application which makes outgoing requests to APIs will benefit from an asynchronous worker</em>&#39;&#39;. I can find many articles to give consensus on this: <a href="https://hackernoon.com/why-you-should-almost-always-choose-sync-gunicorn-over-workers-ze9c32wj"><span style="color:blue">HERE</span></a>, <a href="https://medium.com/building-the-system/gunicorn-3-means-of-concurrency-efbb547674b7"><span style="color:blue">HERE,</span></a>&nbsp;and <a href="https://dev.to/lsena/gunicorn-worker-types-how-to-choose-the-right-one-4n2c"><span style="color:blue">HERE</span></a>. If your program is making network requests, (which is practically the only thing my proxy is doing), at any point where one of these green threads is waiting for the external API to return a response, it can yield its CPU to another thread, so that another request&nbsp;can make progress. This sounds complicated, but the low-level stuff is mostly abstracted away from you. You&rsquo;ve built the synchronous app and that does its job. Gunicorn, its workers and their pseudo-threads are taking care of handling multiple requests.</p>
+
+<p><br />
+My Bottle app now gets run with the async workers like so:&nbsp;</p>
+
+<pre>
+<code class="language-python">import gevent.monkey
+
+# This monkey patching step is necessary to tell the synchronous bits of Python to not block, but instead to use 'green-threads' to 'give up' resources whilst waiting, so that other concurrently handled requests can make progress.  
+
+gevent.monkey.patch_all()
+
+...
+
+run(host="0.0.0.0", port=9000, server="gunicorn", workers=4, worker_class="gevent")</code></pre>
+
+<h2><u>(Very Quick) Conclusion</u></h2>
+
+<p>Bottle makes it easy to build proxy services. PyPy and Gunicorn (via Greenlets),&nbsp;make it easy to get your Python web app to run faster, whilst serving more requests!&nbsp;</p>
+
+<p>This post has very much been written with somebody like me, (at this moment in time), in mind: You&#39;ve already got&nbsp;a track record of building Python web apps and are now beggining to wrap your head around asyncronous code and concurrency. I&#39;ve tried to write as high-level an overview as possible, as I often find the landscape confusing.&nbsp;<br />
+<br />
+I&#39;ve already referenced them above, but I strongly reccomend reading through:&nbsp;</p>
+
+<ul>
+	<li><a href="https://hackernoon.com/why-you-should-almost-always-choose-sync-gunicorn-over-workers-ze9c32wj">Why You Should (Almost) Always Choose Sync Gunicorn Workers</a> by&nbsp;Shamik Ray&nbsp;</li>
+	<li>
+	<p data-selectable-paragraph="" id="c1fa"><a href="https://medium.com/building-the-system/gunicorn-3-means-of-concurrency-efbb547674b7">Better performance by optimizing Gunicorn config</a> by Omar Rayward</p>
+	</li>
+	<li>
+	<p><a href="https://dev.to/lsena/gunicorn-worker-types-how-to-choose-the-right-one-4n2c">Gunicorn Worker Types: How to choose the right one</a>&nbsp;by Luis Sena</p>
+	</li>
+</ul>
+
+<p><br />
+&nbsp;</p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="../vdr-platform-s3-connector/index.html">VDR Platform - S3 Connector</a></li>
+            
+              <li><a href="../django-allauth-custom-provider/index.html">Django Allauth Custom Provider</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/968e25b9-2bd3-4acc-9d9c-9d7f760723ec/";
+this.page.identifier = "968e25b9-2bd3-4acc-9d9c-9d7f760723ec";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/vagrant/index.html" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/systemd/index.html" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/wsgi/index.html" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/rest/index.html" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/tornado/index.html" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-db-queue/index.html" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/docker/index.html" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/authentication/index.html" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/react/index.html" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/portfolio/index.html" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/flask/index.html" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/integration/index.html" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-ninja/index.html" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/apache/index.html" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/dto/index.html" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/celery/index.html" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/mongodb/index.html" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/gunicorn/index.html" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/web-framework/index.html" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/s3/index.html" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/salvo/index.html" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/workflows/index.html" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/nginx/index.html" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django_1/index.html" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bottle/index.html" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypy_1/index.html" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/attrs/index.html" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-rest-framework/index.html" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/webtest/index.html" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/api/index.html" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/proxy/index.html" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/jenkins/index.html" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/automation/index.html" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pymongo/index.html" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bulma/index.html" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypi/index.html" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pydantic/index.html" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/allauth/index.html" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/oauth/index.html" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="../../static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

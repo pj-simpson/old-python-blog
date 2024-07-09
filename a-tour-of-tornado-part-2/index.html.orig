@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="/">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="/about/">About</a>
+        <a class="p-2 text-muted" href="/blog/">Blog</a>
+        <a class="p-2 text-muted" href="/blog/portfolio">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">A Tour Of Tornado (Part 2)</h2>
+    <p class="blog-post-meta">Nov. 1, 2022, 11:15 a.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="/blog/tag/tornado/">
+          Tornado
+        </a>
+        , 
+      
+        <a href="/blog/tag/systemd/">
+          Systemd
+        </a>
+        , 
+      
+        <a href="/blog/tag/apache/">
+          Apache
+        </a>
+        
+      
+    </p>
+    <p>As mentioned in my previous post, Tornado is not like most other Python web frameworks. The dominant paradigm in the Python web world is WSGI, which is a specification that will allow for different web servers to communicate with different Python applications, via a WSGI server. Incoming HTTP requests are chaperoned from the Web-server/reverse-proxy, to the WSGI-compliant Python app and then responses returned by the same route, via something like Unicorn, uWSGI, etc, etc.&nbsp;</p>
+
+<p>Tornado doesn&rsquo;t conform to the WSGI standard. It comes with its own production-quality server, right out of the box. So far, so good, but a WSGI server like <a href="https://docs.gunicorn.org/en/stable/design.html">Gunicorn has multiple worker processes</a>, allowing it to serve many incoming, overlapping requests. How do we overcome this problem for a Tornado App? Although Tornado permits you a lot of freedom to make this decision, the general consensus seems to be to run several instances of the same process and then load-balancing incoming requests across them.</p>
+
+<p>In this post, I&rsquo;m going to explore a simple way to achieve this.</p>
+
+<h2><u><b>PART 1 Get the tornado app up and running on a remote server. </b></u></h2>
+
+<p>In the <a href="https://github.com/pj-simpson/basic-tornado">repo</a>, I&rsquo;ve added a new &lsquo;HomeHandler&rsquo; and routed it to &lsquo;/&lsquo;, so there an endpoint which serves a json for us to easily debug.</p>
+
+<pre>
+<code class="language-python"># app.py 
+...
+
+class HomeHandler(tornado.web.RequestHandler): 
+    def get(self): 
+        self.write({'foo': ‘bar’})
+
+...</code></pre>
+
+<p>Next,&nbsp;I spin up an Ubuntu (20.10) VM from my favourite IAAS provider and then SSH in. It&rsquo;s worth noting here that Python and Git are handily already pre-installed on this operating system. The first step is to create the directory for the web application. I will do so under /var/www/, as one convention dictates.</p>
+
+<pre>
+<code class="language-bash">$ Sudo mkdir /var/www/tornado</code></pre>
+
+<p>Then I cd into that directory and pull my repository from version control.</p>
+
+<pre>
+<code class="language-bash">$ git clone https://github.com/pj-simpson/basic-tornado.git</code></pre>
+
+<p>In this instance I am going to use <a href="https://systemd.io/">Systemd</a> to run the Tornado App. Systemd is, (amongst other things), a service manager. This allows us to easily stop and start programs as background (a.k.a daemon) processes. These processes are defined as &lsquo;Units&rsquo; in a &lsquo;.service&rsquo; file. I found this good definition <a href="https://www.freedesktop.org/software/systemd/man/systemd.service.html#:~:text=Description,controlled%20and%20supervised%20by%20systemd">HERE</a>.</p>
+
+<blockquote>
+<p>A unit configuration file whose name ends in &quot;.service&quot; encodes information about a process controlled and supervised by systemd.</p>
+</blockquote>
+
+<p>Create one of these files like so, using the <a href="https://www.nano-editor.org/">Nano</a> text editor (which also comes with Ubuntu):</p>
+
+<pre>
+<code class="language-bash">$ sudo nano /etc/systemd/system/tornado.service</code></pre>
+
+<pre>
+<code class="language-ini">[Unit]
+Description=Test Tornado App
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /var/www/tornado/basic-tornado/app.py
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+
+<p>You&rsquo;ll notice that the file has an ini-like syntax. <i>Description</i> is a user-friendly description of the process, whilst the <em>WantedBy</em> declaration specifies that the process should start after the linux machine boots up. The [Service] block is the most important thing here and <em>ExecStart</em> defines the command which gets run when the service is started.</p>
+
+<p>Save this file and then close it,&nbsp; (from the nano text editor that&rsquo;s &lsquo;ctrl+O&rsquo; then &lsquo;ctrl+X&rsquo;). Then we can run these commands to interact with Systemd directly. Systemctl is the command line interface for Systemd.</p>
+
+<pre>
+<code class="language-bash">$ systemctl daemon-reload</code></pre>
+
+<p>This restarts and reloads all the unit files, (including our new one), and generate the services. We can now start our service like so:</p>
+
+<pre>
+<code class="language-bash">$ systemctl start tornado.service</code></pre>
+
+<p>Test to see that its running locally:&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ curl http://127.0.0.1:8001/
+{ 'foo' : 'bar' }</code></pre>
+
+<p>Good! So we can demonise our Tornado app and manage it via Systemd. The next step is to get a number of these up and running, all on different ports.</p>
+
+<pre>
+<code class="language-bash">$ systemctl stop tornado.service</code></pre>
+
+<h2><u><b>PART 2 run multiple instances</b></u></h2>
+
+<p>Systemd has the concept of a <i>template</i> unit file. Template file naming convention is <em>{service_name}@{argument}.service</em>, allowing for a variable to be passed after &lsquo;@&lsquo; and before &lsquo;.service&rsquo;. This has been designed specifically for running multiple instances of the same service and suits our use-case perfectly, as we want to do exactly this, with only one detail altering between each instance of each running process, (the port).</p>
+
+<pre>
+<code class="language-bash">$ sudo nano /etc/systemd/system/tornado@.service</code></pre>
+
+<pre>
+<code class="language-ini">[Unit]
+Description=Test Tornado App
+PartOf=tornado.target
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/usr/bin/python3 /var/www/tornado/basic-tornado/app.py --port=%i
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+
+<p><em>%i </em>is the variable passed in when the service is started. The Tornado app parses&nbsp; &mdash;port arguments given to it and will dynamically listen on whichever port in passed (falling back on a default of 8000).</p>
+
+<pre>
+<code class="language-python"># app.py
+
+...
+
+from tornado.options import define, options
+
+define("port", default=8000, type=int)
+
+...
+
+app.listen(options.port)</code></pre>
+
+<p>So, for example, we could run our tornado app on port 8002 of the localhost like so:</p>
+
+<pre>
+<code class="language-bash">$ systemctl start tornado@8002.service</code></pre>
+
+<p>And then also repeat this however many times we wish, for whichever other ports we want to use, but for multiple related processes, it&nbsp;would be far more efficient to predefine this from a single location.<br />
+<br />
+The other type of unit file needed to achieve this is a target file. Target files group units together, (and explains &lsquo;PartOf=&rsquo; in the template unit file).&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ sudo nano /etc/systemd/system/tornado.target</code></pre>
+
+<pre>
+<code class="language-ini">[Unit]
+Description=Multiple Tornado Processes
+Requires=tornado@8001.service tornado@8002.service tornado@8003.service tornado@8004.service 
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+
+<p>You can see from the Requires directive that we are going to run 4 instances of our tornado service (defined in the template), running from ports 8001-8004. They can now be started from a single command:</p>
+
+<pre>
+<code class="language-bash">$ systemctl start tornado.target</code></pre>
+
+<p>We can use curl to ensure that we are serving the app from each port correctly.</p>
+
+<pre>
+<code class="language-bash">$ curl http://127.0.0.1:8001
+{'foo' : 'bar'}
+$ curl http://127.0.0.1:8002
+{'foo' : 'bar'}
+$ curl http://127.0.0.1:8003
+{'foo' : 'bar'}
+$ curl http://127.0.0.1:8004
+{'foo' : 'bar'}</code></pre>
+
+<p>It is also worth noting that using systemctl, we can still manage the individual processes, independent of the target file.<br />
+<br />
+Here is the result of inspecting an individual daemon:&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ systemctl status tornado@8003.service 
+
+root@peter-testing:/var/www/tornado/basic-tornado# systemctl status tornado@8003.service
+● tornado@8003.service - Test Tornado App
+     Loaded: loaded (/etc/systemd/system/tornado@.service; disabled; vendor preset: enabled)
+     Active: active (running) since Tue 2022-10-04 18:29:44 UTC; 2min 22s ago
+   Main PID: 17467 (python3)
+      Tasks: 1 (limit: 1119)
+     Memory: 19.8M
+        CPU: 288ms
+     CGroup: /system.slice/system-tornado.slice/tornado@8003.service
+             └─17467 /usr/bin/python3 /var/www/tornado/basic-tornado/app.py --port=8003
+
+Oct 04 18:29:44 peter-testing systemd[1]: Started Test Tornado App.
+Oct 04 18:30:44 peter-testing python3[17467]: [I 221004 18:30:44 web:2239] 200 GET / (127.0.0.1) 0.82ms</code></pre>
+
+<h2><u><b>Part 3 Load Balance &amp; Reverse Proxy</b></u></h2>
+
+<p>&nbsp;</p>
+
+<p>Now that there are 4 instances of our Tornado App running on the server, we need a point of connection for the outside world to reach our server, but then have those http requests distributed across the different Tornado processes.</p>
+
+<p>A reverse proxy seems to most appropriate tool here as its a type of web server which sits in-front of other servers and forwards on external requests to the appropriate backends. However, we also need to distribute the requests across the 4 servers, as its no good to send the request to an app which is busy at the time.</p>
+
+<p>In this instance I&rsquo;m going to use the Apache Webserver, as this is incredibly popular and flexible, (<a href="https://en.wikipedia.org/wiki/Apache_HTTP_Server">according to Wikipedia its the most popular).</a></p>
+
+<pre>
+<code class="language-bash">$ sudo apt install apache2</code></pre>
+
+<p>We then need to install some modules which will give us extra functionality.&nbsp;</p>
+
+<p><a href="https://httpd.apache.org/docs/2.4/mod/mod_proxy.html">mod_proxy</a> along with&nbsp;<a href="https://httpd.apache.org/docs/2.4/mod/mod_proxy_http.html">mod_proxy_http</a>, allow us to use the web server as a reverse proxy for HTTP requests.&nbsp;</p>
+
+<p><a href="https://httpd.apache.org/docs/2.4/mod/mod_proxy_balancer.html">proxy_balancer</a> and&nbsp;<a href="https://httpd.apache.org/docs/2.4/mod/mod_lbmethod_byrequests.html">lbmethod_byrequests</a>&nbsp;give us load balancing capabilities (distributing them according to a request counting algorithm).&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ sudo a2enmod proxy_balancer
+$ sudo a2enmod lbmethod_byrequests
+$ sudo a2enmod proxy
+$ sudo a2enmod proxy_http</code></pre>
+
+<p>&nbsp;</p>
+
+<p><img height="912" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2022/11/20/screenshot-2022-11-20-at-192710.png" width="1448" /></p>
+
+<p>We can now edit the Apache configuration file, to define the behaviour of our load-balancer/reverse-proxy.&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ sudo nano /etc/apache2/sites-available/000-default.conf</code></pre>
+
+<p>The contents of the file should be like so. This isnt an Apache tutorial, so I wont go over this in detail, but sufficed to say I think the XML format speaks for itself:&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-apache">&lt;VirtualHost *:80&gt;
+
+
+        &lt;Proxy balancer://tornadocluster&gt;
+                BalancerMember http://127.0.0.1:8001
+                BalancerMember http://127.0.0.1:8002
+                BalancerMember http://127.0.0.1:8003
+                BalancerMember http://127.0.0.1:8004
+        &lt;/Proxy&gt;
+
+        ProxyPreserveHost On
+
+        ProxyPass / balancer://tornadocluster/
+        ProxyPassReverse / balancer://tornadocluster/
+
+        ErrorLog ${APACHE_LOG_DIR}/error.log
+        CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+&lt;/VirtualHost&gt;</code></pre>
+
+<p>The service will need restarting:&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ sudo systemctl restart apache2</code></pre>
+
+<p>I have also updated my handler, in order to better demonstrate the loadbalancing in action:</p>
+
+<pre>
+<code class="language-python"># app.py 
+
+... 
+
+class HomeHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write({"You have been load balanced to the following port":options.port})
+
+...</code></pre>
+
+<p>&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ curl http://mydomain.com
+{"You have been load balanced to the following port":8001}
+$ curl http://mydomain.com
+{"You have been load balanced to the following port":8002}
+$ curl http://mydomain.com
+{"You have been load balanced to the following port":8003}
+$ curl http://mydomain.com
+{"You have been load balanced to the following port":8004}</code></pre>
+
+<p>A final good tip is the <em>journalctl</em> command, which allows us to inspect the logs written for a particular service. This is handy for debugging (&#39;-u&#39; flag filters by unit)&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ journalctl -u tornado@8001.service </code></pre>
+
+<pre>
+<code class="language-bash">...
+
+Oct 04 20:26:30 peter-testing python3[18833]: [I 221004 20:26:30 web:2239] 200 GET / (127.0.0.1) 1.09ms
+Oct 04 20:26:59 peter-testing python3[18833]: [E 221004 20:26:59 web:1789] Uncaught exception GET /domains/peter (127.0.0.1)
+Oct 04 20:26:59 peter-testing python3[18833]:     HTTPServerRequest(protocol='http', host='178.62.27.86', method='GET', uri='/domains/peter', version='HTTP/1.1'
+
+...</code></pre>
+
+<p>And there you have it! A brutally simple implementation of a load balancer and multiple services. Its quite nice interfacing from a web server directly to a Python app, without having to faff around with any WSGI stuff.&nbsp;<br />
+&nbsp;</p>
+
+<h2><strong><u>ADDENDUM (Roll your own LoadBalancer).</u></strong></h2>
+
+<p>I had a go at <a href="https://github.com/pj-simpson/Whirlwind">making my own HTTP Loadbalancer, using Tornado itself!&nbsp;</a></p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="/blog/a-tour-of-tornado/">A Tour of Tornado (Part 1)</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/070eec15-63c6-423b-ad9a-ccec22ea1eea/";
+this.page.identifier = "070eec15-63c6-423b-ad9a-ccec22ea1eea";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/vagrant/" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/systemd/" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/wsgi/" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/rest/" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/tornado/" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-db-queue/" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/docker/" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/authentication/" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/react/" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/portfolio/" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/flask/" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/integration/" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-ninja/" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/apache/" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/dto/" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/celery/" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/mongodb/" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/gunicorn/" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/web-framework/" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/s3/" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/salvo/" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/workflows/" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/nginx/" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django_1/" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bottle/" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypy_1/" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/attrs/" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-rest-framework/" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/webtest/" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/api/" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/proxy/" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/jenkins/" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/automation/" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pymongo/" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bulma/" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypi/" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pydantic/" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/allauth/" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/oauth/" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="/static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

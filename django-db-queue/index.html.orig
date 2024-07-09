@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="/">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="/about/">About</a>
+        <a class="p-2 text-muted" href="/blog/">Blog</a>
+        <a class="p-2 text-muted" href="/blog/portfolio">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">Django DB Queue</h2>
+    <p class="blog-post-meta">May 4, 2022, 3:32 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="/blog/tag/celery/">
+          Celery
+        </a>
+        , 
+      
+        <a href="/blog/tag/django-db-queue/">
+          Django DB Queue
+        </a>
+        
+      
+    </p>
+    <p>In the most recent edition of the excellent Django newsletter, <a href="https://nessuent.xyz/posts/2022-03-26_Django_jobs.html?utm_campaign=Django%2BNewsletter&amp;utm_medium=email&amp;utm_source=Django_Newsletter_122">this blog post</a> from Manos Pitsidianakis caught my eye. It demonstrates how to effectively &lsquo;roll your own&rsquo; asynchronous job queue within Django, using the database, without the need to install something like <a href="https://docs.celeryq.dev/en/stable/getting-started/introduction.html">Celery</a>.</p>
+
+<p>Speaking of which, Celery is obviously the foremost solution when it comes to asynchronous task processing in Python web apps, but, (truth-be-told), it can be a bit of a pain to get up and running. There are several things to do, like pick a broker and result backend, hack around to get hot re-loading, add monitoring and then you are probably dockerizing it, given this complexity.</p>
+
+<p>I often find myself working on projects and thinking to myself, &lsquo;I really need Celery now, but I&rsquo;ll put it off because introducing it is so daunting&rsquo;. <a href="https://dramatiq.io/">Dramatiq</a> seems to occupy &lsquo;<em>second place</em>&rsquo;, behind Celery, and whilst it&#39;s designed with a focus on greater simplicity, it still requires <a href="https://redis.com/">Redis</a> or <a href="https://www.rabbitmq.com/">RabbitMQ</a> to act as a message broker.</p>
+
+<p>I had been wondering if there was a solution which could achieve roughly what Celery offers, without any of the associated set-up and dependancies, and I eventually stumbled across the <a href="https://github.com/dabapps/django-db-queue">Django DB Queue</a> package. A quick review of the docs and it seemed to me to offer the lowest friction possible for having background tasks in a Django project.</p>
+
+<p>The aforementioned blog post reminded me that I had been meaning to give it a try for a while, so here is my record of taking it for a spin, for the first time...</p>
+
+<hr />
+<h2><u>Initial Test</u></h2>
+
+<p>Glossing over the setup, I pip install the package, update my new Django project&#39;s settings and then perform a migration (we are using the database here as the queue, after all). If you are unsure about any of this, initial steps are on the project&rsquo;s <a href="https://github.com/dabapps/django-db-queue">README</a>.&nbsp;</p>
+
+<p>After creating an app, I then add an app level jobs.py file, which contains functions intended to be run in the background. This first example is incredibly similar to the example provided by the developers of Django DB Queue.&nbsp;</p>
+
+<p>&nbsp;</p>
+
+<pre>
+<code class="language-python">#jobs.py
+
+import time
+
+def first_task(job):
+    print("This is the job starting...")
+    time.sleep(5)
+    print("This is the job ending...")</code></pre>
+
+<p>I then go back to my settings file and define the following configuration:</p>
+
+<pre>
+<code class="language-python"># settings.py
+
+...
+
+JOBS = {
+    "first_job": {
+        "tasks": ["initial.jobs.first_task"],
+    },
+}
+
+...</code></pre>
+
+<p>The convention in DDBQ is that a &#39;<em>job</em>&#39; can contain multiple &lsquo;<em>tasks</em>&#39;.&nbsp;In this trivial example, my &lsquo;<em>first_job</em>&rsquo; function is the task and it&#39;s a one task job. You&rsquo;ll see from the settings file&nbsp;that the &lsquo;tasks&rsquo; value is a list, so it could easily be expanded to contain multiple. Woth noting here that &#39;intial&#39; in the name of my app, so &#39;initial.jobs.first_task&#39; is the dot notiation path to the function.&nbsp;</p>
+
+<p>If required, the definition of the jobs and their tasks can be further enriched with creation and failure &lsquo;callbacks&rsquo;, so&nbsp;further code can be executed, depending on the state of the given tasks. See the DDBQ docs for more information.&nbsp;</p>
+
+<p>In order to create a job and send it to the queue, (which is the application&rsquo;s DB), you just have to use the familiar Django Model &lsquo;<em>create</em>&rsquo; method, passing in the job name, (as defined in the settings). Anyone familiar with Django&rsquo;s ORM will appreciate how easy this is. Here is an example of me doing so, in the views.py file of this test application.</p>
+
+<pre>
+<code class="language-python">#views.py
+
+from django.http import JsonResponse
+from django_dbq.models import Job
+
+
+def initial_test(request):
+    Job.objects.create(name="first_job")
+    resp = {'Ping':'Pong'}
+    return JsonResponse(resp)</code></pre>
+
+<p>Next I just open up another shell, and use a management command to begin a &lsquo;worker&rsquo; process, which will be running our jobs.</p>
+
+<pre>
+<code class="language-bash">$ python manage.py worker
+$ Starting job worker for queue "default" with rate limit 1/s</code></pre>
+
+<p>If I then start the Django development server and use a browser to hit the endpoint I&rsquo;ve hooked up to the above view, it will return {&quot;Ping&quot;: &ldquo;Pong&quot;} to me, but looking at the terminal where the worker process is running, I see:</p>
+
+<pre>
+<code class="language-bash">$ This is the job starting...
+$ This is the job ending...</code></pre>
+
+<p>Great, so my initial test worked! It has a nice,&nbsp;intuitive API and it really is that easy to get simple background tasks up and running, using the DB as the queue.</p>
+
+<hr />
+<h2><u>DISCOGRAPHY PORTFOLIO APP</u></h2>
+
+<p>The next thing I like to do, after running a little arbitrary test of a new package, is to try and build something more meaningful, just to get more of a feel for how I might use it &lsquo;IRL&#39;.</p>
+
+<p>My main hobby is playing in bands, so creating web applications for musical artists is a conundrum which is never far from my mind. All my friends tend to make weird and noisy music, (to little commercial attention), so whilst they are undoubtedly committed artists, by and large, they have other jobs alongside their music. This means they might only release, say, one record a year and perform a handful of shows. This dynamic means updating any website becomes not only&nbsp;a bit of a chore, (as you are only doing it less than a dozen times a year), but also a big duplication of effort. There are multiple platforms for concert listings, social media announcements, archiving releases, etc, etc, etc that musicians are just expected to have and keep up to date, so lots of crossposting!&nbsp;</p>
+
+<p>For a while now I&rsquo;ve had an idea for a band website, which just collates information from these external platforms, (OK I&#39;ll admit its not the most original idea, but bear with me). There could be background jobs which call the external APIs, check for changes and then update a database if required.</p>
+
+<p>I am going to use DDBQ to&nbsp;build an integration with <a href="https://www.discogs.com/">Discogs</a>, the internets primary source of truth for recorded audio!</p>
+
+<p>Inspecting the &#39;<a href="https://www.discogs.com/developers#page:database,header:database-artist">GET Artist</a>&#39; endpoint for the Discogs&#39;&nbsp;API&nbsp;for my band Circuit Breaker, it returns the following response body:&nbsp;</p>
+
+<pre>
+<code class="language-json">{
+   "name":"Circuit Breaker (7)",
+   "id":3552343,
+   "resource_url":"https://api.discogs.com/artists/3552343",
+   "uri":"https://www.discogs.com/artist/3552343-Circuit-Breaker-7",
+   "releases_url":"https://api.discogs.com/artists/3552343/releases",
+   "images":[
+      {
+         "type":"primary",
+         "uri":"",
+         "resource_url":"",
+         "uri150":"",
+         "width":500,
+         "height":296
+      },
+      {
+         "type":"secondary",
+         "uri":"",
+         "resource_url":"",
+         "uri150":"",
+         "width":600,
+         "height":521
+      }
+   ],
+   "profile":"Circuit Breaker are an Industrial band, consisting of London based brothers Peter and Edward Simpson. ",
+   "urls":[
+      "http://circuitbreakerband.tumblr.com/",
+      "https://www.facebook.com/pages/Circuit-Breaker/143351282344677#",
+      "https://soundcloud.com/circuitbreakerindustrial"
+   ],
+   "members":[
+      {
+         "id":4013401,
+         "name":"Edward Simpson",
+         "resource_url":"https://api.discogs.com/artists/4013401",
+         "active":true
+      },
+      {
+         "id":4013402,
+         "name":"Peter Simpson (8)",
+         "resource_url":"https://api.discogs.com/artists/4013402",
+         "active":true
+      },
+      {
+         "id":5792890,
+         "name":"Els (7)",
+         "resource_url":"https://api.discogs.com/artists/5792890",
+         "active":true
+      }
+   ],
+   "data_quality":"Needs Vote"
+}</code></pre>
+
+<p>You can see that the &#39;<em>releases_url</em>&#39; in the JSON response, gives us the endpoint to inspect all the recordings which we have released over the years:</p>
+
+<pre>
+<code class="language-json">{
+   "pagination":{
+      "page":1,
+      "pages":1,
+      "per_page":50,
+      "items":7,
+      "urls":{
+         
+      }
+   },
+   "releases":[
+      {
+         "id":5099743,
+         "status":"Accepted",
+         "type":"release",
+         "format":"Cass, Ltd, C30",
+         "label":"Tombed Visions",
+         "title":"Grid",
+         "resource_url":"https://api.discogs.com/releases/5099743",
+         "role":"Main",
+         "artist":"Circuit Breaker (7)",
+         "year":2013,
+         "thumb":"",
+         "stats":{
+            "community":{
+               "in_wantlist":8,
+               "in_collection":13
+            }
+         }
+      },
+      {
+         "id":19910101,
+         "status":"Accepted",
+         "type":"release",
+         "format":"CDr, Album",
+         "label":"Not On Label (Circuit Breaker Self-Released)",
+         "title":"Cairn",
+         "resource_url":"https://api.discogs.com/releases/19910101",
+         "role":"Main",
+         "artist":"Circuit Breaker (7)",
+         "year":2013,
+         "thumb":"",
+         "stats":{
+            "community":{
+               "in_wantlist":2,
+               "in_collection":0
+            }
+         }
+      },
+      {
+         "id":6109393,
+         "status":"Accepted",
+         "type":"release",
+         "format":"12\"",
+         "label":"Tombed Visions",
+         "title":"TV12 ",
+         "resource_url":"https://api.discogs.com/releases/6109393",
+         "role":"Main",
+         "artist":"Circuit Breaker (7)",
+         "year":2014,
+         "thumb":"",
+         "stats":{
+            "community":{
+               "in_wantlist":9,
+               "in_collection":25
+            }
+         }
+      },
+      {
+         "id":884186,
+         "title":"My Descent Into Capital",
+         "type":"master",
+         "main_release":7354287,
+         "artist":"Circuit Breaker (7)",
+         "role":"Main",
+         "resource_url":"https://api.discogs.com/masters/884186",
+         "year":2015,
+         "thumb":"",
+         "stats":{
+            "community":{
+               "in_wantlist":22,
+               "in_collection":74
+            }
+         }
+      },
+      ...
+   ]
+}</code></pre>
+
+<p>So you have an &#39;<em>artist</em>&#39; resource&nbsp;and that artist can have &#39;<em>releases&#39;</em>. It will be easy enough to define models based on this relationship, to persist in our data base.&nbsp;</p>
+
+<pre>
+<code class="language-python"># models.py
+
+from django.db import models
+
+class Artist(models.Model):
+    name = models.CharField(max_length=200)
+    biog = models.CharField(max_length=800)
+    external_id = models.IntegerField()
+
+class Release(models.Model):
+    title = models.CharField(max_length=200)
+    year = models.IntegerField()
+    link = models.URLField()
+    external_id = models.IntegerField()
+    artist_external_id = models.ForeignKey(Artist,on_delete=models.CASCADE)</code></pre>
+
+<p>Next in the app level jobs.py file, I&nbsp;define a job to go and fetch the artist information from Discogs:</p>
+
+<pre>
+<code class="language-python"># jobs.py
+
+import requests
+from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+from .models import Artist,Release
+
+def fetch_artist_details(job):
+    id = settings.DISCOGS_ARTIST_ID
+    req = requests.get(f"https://api.discogs.com/artists/{id}")
+    artist_details = req.json()
+    # create artist object in db if not already exists
+    try:
+        _ = Artist.objects.get(external_id=id)
+        pass
+    except ObjectDoesNotExist:
+        Artist.objects.create(
+            name = artist_details['name'],
+            biog = artist_details['profile'],
+            external_id = id
+        )
+    # pass the releases url to the workspace
+    job.workspace['release_uri'] = artist_details['releases_url']
+    print('fetch artist done!')</code></pre>
+
+<p>I have saved the unique identifier for Circuit Breaker&nbsp;in the Discogs system, in the&nbsp;settings.py file, which you can see we are obtaining via the <a href="https://docs.djangoproject.com/en/4.0/topics/settings/">django.conf module&rsquo;s settings object</a>. Obviously I&#39;ve pip installed requests in order to make the http call to the discogs system. If this artist doesn&#39;t exist in our DB, we will create it, otherwise we pass the aforementioned <em>release_uri</em> to the job&#39;s workspace. A workspace is a dictionary which can be accessed by all tasks in a job. Think of it as a job-wide store for metadata which you may want to share across tasks. The next task I will create will be to get the artist&#39;s releases from discogs, so we are passing the url&nbsp;&lsquo;discovered&rsquo; by the first task, to the second:</p>
+
+<pre>
+<code class="language-python"># jobs.py
+...
+
+def fetch_artist_releases(job):
+    id = settings.DISCOGS_ARTIST_ID
+    artist = Artist.objects.get(external_id=id)
+    release_uri = job.workspace['release_uri']
+    req = requests.get(release_uri)
+    release_details = req.json()
+    release_list = release_details['releases']
+    for release in release_list:
+        try:
+            _ = Release.objects.get(external_id=release['id'])
+            pass
+        except ObjectDoesNotExist:
+            Release.objects.create(
+                title=release['title'],
+                year = release['year'],
+                link = release['resource_url'],
+                external_id = release['id'],
+                artist_external_id = artist
+            )
+    print('fetch releases done!')</code></pre>
+
+<p>You can see the same pattern again here. We only create release objects in our DB if they don&rsquo;t already exist.</p>
+
+<p>Why bother persisting this information at the DB level at all? If Discogs are already storing this information, why not just build an app which fetches resources from their servers each time that the page is loaded? Well, I&rsquo;ve created web applications like this in the past and there is no getting away from it; the overhead of calling an external API, waiting for it&#39;s results and then marshalling a response&nbsp;back to a user, is often very slow. Sometimes an app can take that hit, sometimes not.</p>
+
+<p>Given that I&rsquo;m expecting the information at the Discogs end to change very, very rarely, for this use-case it makes more sense to store at my end, then I could replicate the data into some kind of read-only DB for improved performance, or it could be to an in memory datastore, cache, etc&hellip;</p>
+
+<p>Here the new discogs job as defined in my settings and how I then hook it up to two different views:</p>
+
+<pre>
+<code class="language-python"># settings.py
+
+...
+
+JOBS = {
+    "populate_db": {
+        "tasks": [
+            "discogs.jobs.fetch_artist_details",
+            "discogs.jobs.fetch_artist_releases"
+            ],
+    },
+}
+
+...</code></pre>
+
+<pre>
+<code class="language-python"># views.py
+...
+
+def populate_db(request):
+    if request.method == "POST":
+        Job.objects.create(name="populate_db")
+        return TemplateResponse(request, template='populate.html',context={'job':'dispatched'})
+    else:
+        return TemplateResponse(request, template='populate.html')</code></pre>
+
+<p>This view is for the &lsquo;admin&rsquo; page of the &lsquo;CMS&rsquo; (if I can even call it that). Now rather than filling out endless forms, the site admin can hit a button to get our worker process to go and fetch all the relevant info from discogs. The pattern should be known to anyone who has implemented function based view in a python web app. If it&rsquo;s a POST request (i.e the admin has hit that button), we create an instance of the job, otherwise we are just giving the plain html template to that user.</p>
+
+<p><img height="272" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/05/05/screenshot-2022-05-03-at-122811.png" width="770" />The only other view I have is the actually display the release information to an end user:</p>
+
+<pre>
+<code class="language-python"># views.py 
+...
+
+def display_discogs(request):
+    id = settings.DISCOGS_ARTIST_ID
+    artist  = Artist.objects.get(external_id=id)
+    releases = Release.objects.filter(artist_external_id=artist)
+    return TemplateResponse(request, template='discogs.html', context={'artist':artist,'releases':releases})</code></pre>
+
+<p>You can see this just gets what is stored in the DB, and pushes it into a template.</p>
+
+<pre>
+<code class="language-html">&lt;!-- discogs.html --&gt;
+
+&lt;h1&gt;{{ artist.name }}&lt;/h1&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th scope="col"&gt;Releases&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+  {% for release in releases %}
+    &lt;tr&gt;
+      &lt;td&gt;{{ release.title }}&lt;/td&gt;
+    &lt;/tr&gt;
+    {% endfor %}
+  &lt;/tbody&gt;
+&lt;/table&gt;</code></pre>
+
+<p>Et Voila!</p>
+
+<p><img height="548" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/05/05/screenshot-2022-05-03-at-122828.png" width="666" />Possibly the worst looking band discography page ever? But one which used a background job to fetch all the info from an external server. You can compare it to our <a href="https://www.discogs.com/artist/3552343-Circuit-Breaker-7">actual entry in Discogs</a>.</p>
+
+<hr />
+<p>Obviously if this eventually becomes a pattern which I plan to employ in a &#39;<em>real</em>&#39; project, I would build this out to a far greater degree. For starters, I would give it an actual frontend to make it look nice and with authenticated calls to the Discogs API, I could get urls to the images hosted there, and more&hellip; One obvious downside is that having an admin user go in and intermittently hit a button should really&nbsp;be automated to run at a specific intervals. Celery has <a href="https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html#:~:text=celery%20beat%20is%20a%20scheduler,entries%20in%20a%20SQL%20database.">Celery-Beat</a>, whilst&nbsp;<a href="https://github.com/Bogdanp/dramatiq/issues/19">Dramatiq reccomends using third party packages in conjunction</a>&nbsp;to achieve scheduling. Maybe my next post could be to see if I can get reoccurring tasks running at a regular intervals?&nbsp;</p>
+
+<p>I enjoyed building this little POC with Django DB Queue. It has a really nice API; easy to understand and does exactly what you want and nothing more. I will definitely be looking to use it in a future project.</p>
+
+<p>Django DB Queue is authored and maintained by the <a href="https://www.dabapps.com/">DabApps</a> agency. You can checkout their <a href="https://github.com/dabapps">Github</a> page, as well as listen to an intriguing chat with their founder Jamie Matthews on the <a href="https://djangochat.com/episodes/optimizing-django-queries-jamie-matthews">Django Chat podcast</a>.</p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="/blog/vdr-platform-s3-connector/">VDR Platform - S3 Connector</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/e629d931-44a2-4267-ad32-e93b90d3fb6c/";
+this.page.identifier = "e629d931-44a2-4267-ad32-e93b90d3fb6c";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/vagrant/" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/systemd/" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/wsgi/" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/rest/" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/tornado/" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-db-queue/" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/docker/" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/authentication/" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/react/" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/portfolio/" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/flask/" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/integration/" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-ninja/" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/apache/" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/dto/" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/celery/" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/mongodb/" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/gunicorn/" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/web-framework/" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/s3/" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/salvo/" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/workflows/" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/nginx/" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django_1/" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bottle/" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypy_1/" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/attrs/" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-rest-framework/" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/webtest/" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/api/" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/proxy/" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/jenkins/" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/automation/" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pymongo/" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bulma/" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypi/" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pydantic/" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/allauth/" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/oauth/" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="/static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

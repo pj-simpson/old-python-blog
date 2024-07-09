@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="/">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="/about/">About</a>
+        <a class="p-2 text-muted" href="/blog/">Blog</a>
+        <a class="p-2 text-muted" href="/blog/portfolio">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">Trying Out Django Ninja - Part 2</h2>
+    <p class="blog-post-meta">Feb. 14, 2021, 7:08 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="/blog/tag/django_1/">
+          Django
+        </a>
+        , 
+      
+        <a href="/blog/tag/rest/">
+          REST
+        </a>
+        , 
+      
+        <a href="/blog/tag/api/">
+          API
+        </a>
+        , 
+      
+        <a href="/blog/tag/django-ninja/">
+          Django Ninja
+        </a>
+        , 
+      
+        <a href="/blog/tag/django-rest-framework/">
+          Django REST Framework
+        </a>
+        
+      
+    </p>
+    <p>Welcome to the second part of my Django Ninja beginner tutorial. Hopefully you will have read <a href="https://petersimpson.dev/blog/trying-out-django-ninja/">Part 1 </a>and now I am going to walk you through creating exactly the same app with Django REST framework.&nbsp;</p>
+
+<p>There are many excellent books and tutorials out there about DRF, so I dont want to get too bogged down in the &#39;why&#39; of using that framework. I&#39;ll just step through how to get the same functional app as we&#39;ve already built and then you can consider the differences of each approach to building REST APIs. As I&#39;ve already mentioned, there is limited support for Class Based Views in Django Ninja currently, so I will use DRF&#39;s Generic Class Based views, for maximum contrast!</p>
+
+<h1><u>PART 2 - DJANGO REST FRAMEWORK.</u></h1>
+
+<p>I am going to start a new app called drf_service:&nbsp;</p>
+
+<pre>
+<code class="language-bash">python manage.py startapp drf_service
+</code></pre>
+
+<p>Next we&#39;ll install Django REST Framework:</p>
+
+<pre>
+<code class="language-bash">pip install djangorestframework==3.12.2
+</code></pre>
+
+<p>And then go and ensure our project level settings file contains our new app and DRF:</p>
+
+<pre>
+<code class="language-python">#api_comparison/settings.py
+
+...
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+
+    "rest_framework",
+
+    "ninja_service.apps.NinjaServiceConfig",
+    "drf_service.apps.DrfServiceConfig",
+]
+
+
+....</code></pre>
+
+<p>We are going to re-use the models we created in part 1 in ninja_service, so we create a serializers.py file like so, underneath the drf_service app:&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-python">#drf_service/serializers.py
+
+from rest_framework import serializers
+
+from ninja_service.models import Project, Release
+
+class ProjectSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Project
+        fields = "__all__"
+        read_only_fields = (
+            "id",
+        )
+
+class ReleaseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Release
+        fields = "__all__"
+        read_only_fields = (
+            "id",
+        )</code></pre>
+
+<p>I suppose&nbsp;that it might be useful to think of Django Ninja&#39;s Schemas as roughly analogus to DRF&#39;s serializers.&nbsp;After all, they are taking&nbsp;care of&nbsp;parsing, validating and converting data sent to the system. However, as I mentioned in Part 1, the Schema class in Django Ninja inherits from Pydantic&#39;s BaseModel class, so its still worth familiarizing yourself with the&nbsp;<a href="https://pydantic-docs.helpmanual.io/">Pydantic Docs</a>. Here we are using the &#39;ModelSerializer&#39; class, to tightly bind&nbsp;the serliazers&nbsp;to their corresponding Django Model. That doesnt <em>quite</em> happen in the same way in our Ninja Service.&nbsp;</p>
+
+<p>Next we&#39;ll move onto the views.py file in the new app:&nbsp;</p>
+
+<pre>
+<code class="language-python">#drf_service/views.py
+
+from rest_framework.generics import RetrieveUpdateDestroyAPIView, ListCreateAPIView
+from ninja_service.models import Project,Release
+from .serializers import ProjectSerializer,ReleaseSerializer
+from rest_framework.pagination import PageNumberPagination
+
+class CustomPagination(PageNumberPagination):
+    page_size = 3
+
+class ProjectsList(ListCreateAPIView):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+
+class ProjectDetail(RetrieveUpdateDestroyAPIView):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+
+class ReleaseList(ListCreateAPIView):
+    queryset = Release.objects.all()
+    serializer_class = ReleaseSerializer
+    pagination_class = CustomPagination
+
+class ReleaseDetail(RetrieveUpdateDestroyAPIView):
+    queryset = Release.objects.all()
+    serializer_class = ReleaseSerializer
+</code></pre>
+
+<p>Look at all the built in goodies we are importing from DRF!&nbsp;</p>
+
+<p>Not only are these obviously Class Based (In Django Ninja we were writing Function Based Views), but there is also far less of them. &#39;RetrieveUpdateDestroyAPIView&#39; handles POST,PUT,PATCH and DELETE... that was 3 seperate functions in the other app.&nbsp;</p>
+
+<p>Add a urls.py file in the app:&nbsp;</p>
+
+<pre>
+<code class="language-python">#drf_service/urls.py
+
+from django.urls import path
+
+from .views import (
+ProjectDetail,
+ProjectsList,
+ReleaseDetail,
+ReleaseList
+
+)
+
+urlpatterns = [
+    path("projects/&lt;int:pk&gt;", ProjectDetail.as_view(), name="project_detail"),
+    path("projects", ProjectsList.as_view(), name="project_list"),
+    path("releases/&lt;int:pk&gt;", ReleaseDetail.as_view(), name="release_detail"),
+    path("releases", ReleaseList.as_view(), name="release_list"),
+]
+</code></pre>
+
+<p>...and then in the project level urls.py folder, expand it to point to the DRF&nbsp;app:&nbsp;</p>
+
+<pre>
+<code class="language-python">#api_comparison/urls.py
+
+from django.contrib import admin
+from django.urls import path,include
+from ninja_service.api import api
+from rest_framework import permissions
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("ninja-api/", api.urls),
+    path("drf-api/", include("drf_service.urls")),
+]</code></pre>
+
+<p>I could&nbsp;introduce a further level of abstraction here and use DRF&#39;s <a href="https://www.django-rest-framework.org/api-guide/routers/">routers</a>&nbsp;to handle the URLs, but I actually prefer not to. Its a &#39;magical&#39; step too far, for my taste. And herein lies the crux of the issue.. you dont HAVE to use the abstraction DRF provides for you. You can adopt a pick and choose approach. I am using the Generic Class Based views here for maximum contrast to Django Ninja, but you can write FBV using DRF and even create your own Base Classes, as per your requirement.&nbsp;<br />
+<br />
+What about the Django Ninja&#39;s auto generated docs? With DRF its not so &#39;out-the-box&#39;, we have to add in some extra packages and fiddle around with some config:</p>
+
+<pre>
+<code class="language-bash">pip install drf-yasg==1.20.0</code></pre>
+
+<pre>
+<code class="language-python">#api_comparison/settings.py
+...
+
+INSTALLED_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+
+    "rest_framework",
+    'drf_yasg',#new!
+
+    "ninja_service.apps.NinjaServiceConfig",
+    "drf_service.apps.DrfServiceConfig",]
+
+...</code></pre>
+
+<pre>
+<code class="language-python">#api_comparison/urls.py
+
+from django.contrib import admin
+from django.urls import path,include
+from ninja_service.api import api
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework import permissions
+
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="DRF Example",
+        default_version="v1",
+        description="A DRF service to accompany the Django Ninja Tutorial",
+        contact=openapi.Contact(email="your_name@example.com"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("ninja-api/", api.urls),
+    path("drf-api/", include("drf_service.urls")),
+    path(
+            "drf-api/docs",
+            schema_view.with_ui("swagger", cache_timeout=0),
+            name="schema-swagger-ui",
+        ),
+]
+</code></pre>
+
+<p>If we take a look at the docs from Part 1, <a href="http://127.0.0.1:8000/ninja-api/docs">http://127.0.0.1:8000/ninja-api/docs</a>:&nbsp;<br />
+<br />
+<img alt="" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2021/02/16/screen-shot-2021-02-16-at-194550.png" style="width: 1347px; height: 1014px;" />....and then load up&nbsp;<a href="http://127.0.0.1:8000/drf-api/docs">http://127.0.0.1:8000/drf-api/docs</a>:&nbsp;<br />
+<br />
+<img alt="" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2021/02/16/screen-shot-2021-02-16-at-194726.png" style="width: 1348px; height: 1027px;" />You&#39;ll see each docs page is, (more or less), the same thing, but different&nbsp;with regards to a couple of details. DN is reading from the Schemas we created for our app&nbsp;</p>
+
+<p><img alt="" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2021/02/16/screen-shot-2021-02-16-at-194854.png" style="width: 280px; height: 156px;" /><br />
+<br />
+Where as DRF reads from the Django Models:&nbsp;<br />
+&nbsp;</p>
+
+<p><img alt="" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2021/02/16/screen-shot-2021-02-16-at-194909.png" style="width: 257px; height: 223px;" /></p>
+
+<p><br />
+You&#39;ll notice the authentication buttons in the DRF docs, which would appear in the DN docs, were we to be using <a href="https://django-ninja.rest-framework.com/tutorial/authentication/">Authentication</a>. The point I&#39;m trying to hammer home with this comparison is that DRF has&nbsp;loads more <em>stuff </em>already plugged into it, whereas Django Ninja, being the newer framework, needs you as the developer to be more specific and build more functionality up yourself.<br />
+<br />
+That seems like as good place as any to round it off. Try all the calls you made with your Django Ninja app in Part 1, with all the same endpoints (replacing &#39;ninja-api&#39; with &#39;drf-api&#39; in the URIs). You will see that to the outside world they behave in much the same way, whilst giving different response bodies to the ones we constructed with Django Ninja. Perhaps you can revist the DN responses and craft something more akin to what DRF gives, if you prefer that?</p>
+
+<p>An example call:&nbsp;</p>
+
+<pre>
+<code class="language-bash">curl -X POST "http://127.0.0.1:8000/drf-api/projects" -H  "Content-Type: application/json" -d "{"name":"Project DRF","description": "This is the first project posted via DRF"}"
+</code></pre>
+
+<pre>
+<code class="language-json">{
+  "id": 6,
+  "name": "Project DRF",
+  "description": "This is the first project posted via DRF"
+}</code></pre>
+
+<p>-------------------------------------------------------------</p>
+
+<p>So there you have it - the same API built with two different Django REST API Frameworks. Django Ninja is new and smaller, whilst&nbsp;Django REST Framework is more mature and therefore supports a lot more features. However, the main exception being Asynchronicity. This was intended to be a begginer tutorial, so I have purposefully avoided talking about async programming, but one area where DN most definately does currently have the edge over DRF is <a href="https://django-ninja.rest-framework.com/async-support/">Async support</a>.</p>
+
+<p>The way Django is ordinarily taught to begginers is to initially use Function Based Views, before moving to Class Based Views and then ultimately Generic Class Based Views. The thinking behind this is that as the learner, you get a far better idea of what goes on &#39;under the hood&#39; of Django before relying on higher levels of abstraction. The lack of the latter two types of view in Django Ninja, makes it the perfect framework for a new Django user&nbsp;who is&nbsp;coming to REST APIs for the first time.&nbsp;</p>
+
+<p><a href="https://github.com/pj-simpson/django-ninja-tutorial">Github repository for these two tutorials.&nbsp;</a><br />
+&nbsp;</p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="/blog/trying-out-django-ninja/">Trying Out Django Ninja - Part 1</a></li>
+            
+              <li><a href="/blog/django-allauth-custom-provider/">Django Allauth Custom Provider</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/6c5c66a6-26d9-4229-954f-222860d53a82/";
+this.page.identifier = "6c5c66a6-26d9-4229-954f-222860d53a82";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/vagrant/" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/systemd/" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/wsgi/" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/rest/" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/tornado/" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-db-queue/" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/docker/" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/authentication/" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/react/" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/portfolio/" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/flask/" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/integration/" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-ninja/" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/apache/" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/dto/" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/celery/" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/mongodb/" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/gunicorn/" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/web-framework/" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/s3/" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/salvo/" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/workflows/" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/nginx/" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django_1/" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bottle/" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypy_1/" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/attrs/" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-rest-framework/" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/webtest/" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/api/" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/proxy/" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/jenkins/" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/automation/" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pymongo/" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bulma/" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypi/" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pydantic/" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/allauth/" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/oauth/" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="/static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

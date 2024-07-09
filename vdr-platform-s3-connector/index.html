@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../../static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="../../static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="../../index.html">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../index.html">About</a>
+        <a class="p-2 text-muted" href="../index.html">Blog</a>
+        <a class="p-2 text-muted" href="../portfolio.html">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">VDR Platform - S3 Connector</h2>
+    <p class="blog-post-meta">Feb. 9, 2022, 4:12 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="../tag/rest/index.html">
+          REST
+        </a>
+        , 
+      
+        <a href="../tag/api/index.html">
+          API
+        </a>
+        , 
+      
+        <a href="../tag/integration/index.html">
+          Integration
+        </a>
+        , 
+      
+        <a href="../tag/portfolio/index.html">
+          Portfolio
+        </a>
+        , 
+      
+        <a href="../tag/oauth/index.html">
+          OAuth
+        </a>
+        , 
+      
+        <a href="../tag/allauth/index.html">
+          Allauth
+        </a>
+        , 
+      
+        <a href="../tag/celery/index.html">
+          Celery
+        </a>
+        , 
+      
+        <a href="../tag/s3/index.html">
+          S3
+        </a>
+        
+      
+    </p>
+    <p><a href="https://github.com/pj-simpson/VDR-Integration">My most recent project </a>has been to develop a <em>proof of concept </em>for a common integration use-case in the LegalTech world. Virtual Data Rooms facilitate M&amp;A Transactions and VDR Platforms can allow law firms to run many transactions at once, all managed from a single SaaS Platform.</p>
+
+<p>Crucially, VDR Platforms will generally charge by the amount of data stored, so an integration which can provide efficient transfer out of the system, is a valuable tool for system administrators. At a very high level, this app sits as a connector in-between a VDR Platform and a cloud storage solution, (in this case Amazon S3).</p>
+
+<p>The Django app itself provides a basic dashboard for searching and viewing metadata associated with these data rooms (also termed &lsquo;sites&rsquo;). Individual sites can have their detail viewed and from there, the file &amp; folder structures of these sites can be downloaded onto the server, as well as the connected remote storage. The individual sites can also be &#39;soft&#39; (i.e recycle bin) deleted or even &#39;hard&#39; (irretrievably) deleted. It supposed to be a &lsquo;one-stop-shop&rsquo; for managing data rooms, post-transaction. The folder structures are archived in another solution and the data is purged from the VDR service.</p>
+
+<p><img src="https://user-images.githubusercontent.com/40800258/153038124-897fd7e2-948d-4525-8ab3-adf2f56863c0.png" style="height: 470px; width: 1000px;" /></p>
+
+<h1><strong>Points of discussion&hellip; </strong></h1>
+
+<h2><u>Service Layer </u></h2>
+
+<p>Whilst there are many debates within the Django world which never seem to die off (FBV vs CBV, anyone?), I don&rsquo;t suppose there is any contention around the notion that Views should be &lsquo;thin&rsquo;. Often this involves pushing a lot of the business logic right down to the model layer, which isn&#39;t always ideal, (<a href="https://github.com/dabapps/django-readers#motivation">and could say to be trampling all over the &lsquo;single responsibility principle&rsquo;</a>).</p>
+
+<p>When consuming an external service in an app like the one I&rsquo;ve built here, its doubly an issue because:</p>
+
+<ol>
+	<li>&nbsp;The App is a &lsquo;connector&rsquo;, so we dont REALLY have a model layer to dump logic into &mdash; we are not really persisting any data our end, just grabbing it from one place and slinging it to another.</li>
+	<li>&nbsp;There is A LOT to do. Make the API call, check the response code, parse the body of the response, transform the data, make another API call, etc ,etc&hellip; A View which encapsulated all of this could easily become an unreadable nightmare.</li>
+</ol>
+
+<p>Could a &lsquo;Service Layer&rsquo; come to the rescue here and what is a service layer anyway? T<a href="https://github.com/HackSoftware/Django-Styleguide#services">he Hacksoft Style guide </a>defines a service layer as</p>
+
+<blockquote>
+<p>&lsquo;&rsquo;The service layer speaks the specific domain language of the software, can access the database &amp; other resources &amp; can interact with other parts of your system.&rsquo;&rsquo;</p>
+</blockquote>
+
+<p>and goes onto say:</p>
+
+<blockquote>
+<p>&lsquo;&rsquo;A service can be:</p>
+
+<ul>
+	<li>A simple function.</li>
+	<li>A class.</li>
+	<li>An entire module.</li>
+	<li>Whatever makes sense in your case.&quot;</li>
+</ul>
+</blockquote>
+
+<p>&nbsp;</p>
+
+<p>That feels as though I&rsquo;ve been given a lot of wriggle room to define a service layer however I see fit, so long as the Views stay &lsquo;<em>view-y</em>&rsquo; and the Models stay &lsquo;<em>model-y</em>&rsquo;, (<a href="https://user-images.githubusercontent.com/387867/134778130-be168592-b953-4b74-8588-a3dbaa0b6871.png">their diagram</a>, couldnt really make it any clearer).</p>
+
+<p>In the end I settled on groups of functions, each of which&nbsp;does &lsquo;one thing&rsquo;, before passing off to the next layer.<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">Core 
+
+|-- http_handlers/ 
+
+   |-- some python files... 
+
+|-- data_parsers/ 
+
+   |-- etc... 
+
+|-- data_classes/ 
+
+   |-- etc… </code></pre>
+
+<p>The http_handler functions <strong>only</strong> make a call to the external service, they then hand the response body off to data_parser functions, who populate data_classes, which are eventually returned to the view. In the below code examples I&#39;ve omitted comments and some of the code for simplicity, but it should be clear whats going on. This is the &#39;flow&#39; through the service layers for when a user wants to see the details of a virtual data room.</p>
+
+<p><img src="https://user-images.githubusercontent.com/40800258/153038126-feba6ee7-af5d-43bc-b3b8-c30b5b98d163.png" style="height: 454px; width: 1000px;" /></p>
+
+<p>core/views.py</p>
+
+<pre>
+<code class="language-python">...
+
+def site_detail_view(request, id: int):
+
+    site = get_single_site(request.user, id)
+
+    return TemplateResponse(request, "site_detail.html", {"context_data": site})
+
+...</code></pre>
+
+<p>core/http_handlers/site_http_handlers.py</p>
+
+<pre>
+<code class="language-python">...
+
+def get_single_site(request_user, id: int):
+
+    VDR_BASEURL = get_setting("remote_system_base_url")
+
+    site_id = id
+
+    access_token = SocialToken.objects.get(account__user=request_user)
+    url = f"{VDR_BASEURL}/sites/{site_id}"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json",
+    }
+
+    response = requests.get(url, headers=headers)
+
+    #omitting some error handling here for brevity
+
+    result = parse_get_single_site(response.json())
+
+    return result
+
+...</code></pre>
+
+<p>core/data_parsers/site_data_parsers.py</p>
+
+<pre>
+<code class="language-python">...
+
+def parse_get_single_site(json) -&gt; VDRSiteDetail:
+
+    # omitting some logic for brevity
+
+    site = VDRSiteDetail(
+        id=json["id"],
+        name=json["sitename"],
+        owner_email=json["siteowner"]["email"],
+        owner_name=json["siteowner"]["firstname"] + " " + json["siteowner"]["lastname"],
+        created_date=created_date,
+        status=json["status"],
+        active_document_size=json["rawsitesize"]["activedocumentsize"],
+        deleted_document_size=json["rawsitesize"]["deleteddocumentsize"],
+        total_size=json["rawsitesize"]["totalsize"],
+        site_root_folder_id=json["sitefolderID"],
+        description=site_description,
+        administrator_notes=admin_note,
+        start_date=start_date,
+        archived_date=archived_date,
+        bidder_site=int(json["biddersite"]["enable"]),
+        modules=parse_site_modules(json["module"]),
+        categories=parse_site_categories(json["categories"]),
+        password_protected=json["siteRestrictionType"]["passwordprotected"],
+        two_factor_authentication=json["siteRestrictionType"][
+            "twoFactorAuthentication"
+        ],
+        terms_and_conditions=json["siteRestrictionType"]["termsandconditions"],
+        ip_restriction=json["siteRestrictionType"]["iprestrictedsite"],
+        digital_rights_management=json["siteRestrictionType"]["drm"],
+        error=0,
+    )
+
+    return site
+
+...</code></pre>
+
+<h2><u>Data Transfer Objects </u></h2>
+
+<p>As mentioned above, beyond some config, we are not really persisting anything at the application level, so &lsquo;Models&rsquo; as we understand them in Django are less of a concern here. More relevant would be the notion of a &lsquo;Data Transfer Object&rsquo;, as we are passing data between entities. There is a good article on Python and DTO <a href="https://dev.to/izabelakowal/some-ideas-on-how-to-implement-dtos-in-python-be3">HERE</a>.</p>
+
+<p>Accessing attributes from deeply nested objects is a bit fiddly and ugly in Python. Depending on the complexity of whatever data structure the API you are calling gives you back, its not uncommon to see things like:</p>
+
+<pre>
+<code class="language-python">thing = json["foo"][0]["bar"][1][“fizz”]</code></pre>
+
+<p>Best to have the data_parsing layer to deal exclusively with this kind of grubbing about and define something far more legible and elegant that your code can actually make use of.</p>
+
+<p>For this project, I&rsquo;ve employed the <a href="https://python.plainenglish.io/an-introduction-to-the-pydantic-stack-9e490d606c8d">popular Pydantic library</a>. Not only does it give us a less cluttered interface when defining&nbsp;objects,&nbsp;we also get data validation thrown in for free!&nbsp;</p>
+
+<p>Here is the site detail&nbsp;object, relevant to the code examples above:</p>
+
+<pre>
+<code class="language-python">... 
+
+class VDRSiteDetail(BaseModel):
+    id: int
+    name: str
+    description: str
+    administrator_notes: str
+    owner_email: str
+    owner_name: str
+    created_date: str
+    start_date: str
+    archived_date: str
+    status: str
+    active_document_size: int
+    deleted_document_size: int
+    total_size: int
+    site_root_folder_id: int
+    bidder_site: bool
+    error: bool = 0
+    modules: List[VDRSiteModule]
+    categories: List[VDRSiteCategory]
+    password_protected: bool
+    two_factor_authentication: bool
+    terms_and_conditions: bool
+    ip_restriction: bool
+    digital_rights_management: bool
+
+... </code></pre>
+
+<p>&nbsp;</p>
+
+<h2><u>Background Tasks </u></h2>
+
+<p>In my experience, (supporting a VDR Platform), users tend to put an amount of data in which could be described as &lsquo;big-medium&rsquo; (!?). Think tens of GBs. Nothing crazy, but also something which will take long enough&nbsp;to download, that you&rsquo;ll want to do it outside of the request-response cycle. Obviously, Celery is the Python world&rsquo;s &lsquo;go-to&rsquo; for background tasks. I want to users of my app to be able to identify the sites they want to either download or delete and then have those operations run by a background worker process, whilst the frontend of my app polls to see whether or not its finished.</p>
+
+<p>Good Tutorial on this <a href="https://testdriven.io/blog/django-and-celery/">HERE</a> . My integration is using <a href="https://docs.celeryproject.org/en/stable/userguide/canvas.html#groups">Celery Groups </a>to run its &lsquo;local&rsquo; (i.e on the server) download and streaming of the files to S3 in parallel.&nbsp;</p>
+
+<p><img src="https://user-images.githubusercontent.com/40800258/153038135-dea8c4e0-5208-4e6b-b990-d76bd11b1d7f.png" style="height: 279px; width: 1000px;" /></p>
+
+<p>The Celery Tasks are also recursive, allow for us to easily &#39;walk-down&#39; a VDR&#39;s folder structure:&nbsp;</p>
+
+<pre>
+<code class="language-python">@shared_task()
+def recursive_site_builder_task(
+    request_user_id: int,
+    folder_id: int,
+    local_path=None,
+    vdr_path=None,
+    report_id: int = None,
+) -&gt; None:
+
+
+    current_folder = FolderContentsForLocal(
+        user=request_user_id,
+        folder_id=folder_id,
+        local_path=local_path,
+        vdr_path=vdr_path,
+        report_id=report_id,
+    )
+    current_folder.prepare_folder()
+    current_folder.write_folder_to_local()
+
+    if current_folder.has_files():
+        current_folder.iterate_over_and_write_files_to_local()
+
+    if current_folder.has_subfolders():
+        for folder in current_folder.subfolders.subfolder_list:
+            recursive_site_builder_task.delay(
+                current_folder.user.id,
+                folder.id,
+                current_folder.local_path,
+                current_folder.vdr_path,
+                current_folder.report_id,
+            )</code></pre>
+
+<p>In the above code, we have a &#39;FolderContentsForLocal&#39; object, which does a lot of our heavy lifting. After calling a &#39;prepare folder&#39; method (just to check we have all the detail we need to perform the different actions), we create the folder on the local server. If there are files in the folder, we download all those and if there are subfolders, we recursively call the same Celery task on those subfolders. Recursion is made easier in this instance, as there will always be a termination case, (eventually we will hit a folder with no subfolders!).&nbsp;<br />
+&nbsp;</p>
+
+<h2><br />
+<u>Mocking &amp; Monkey Patching </u></h2>
+
+<h2>&nbsp;</h2>
+
+<p>Alongside Celery and Pydantic, Pytest must be one of the most ubiquitous packages in Python web development. The testing framework makes for <a href="https://docs.pytest.org/en/6.2.x/monkeypatch.html">easy mocking and monkey patching.</a> For a layered architecture this is crucial to test components in isolation. Especially when some layers will be calling external APIs.</p>
+
+<p><span id="cke_bm_3614S" style="display: none;">&nbsp;</span>Here is an example of a Pytest fixture, which returns the type of JSON response we know the external API will give:&nbsp;</p>
+
+<pre>
+<code class="language-python">@pytest.fixture
+def vdr_site_list_json_response():
+    with open("tests/test_utilities/json_files/site_list.json", "r") as f:
+        return json.loads(f.read())</code></pre>
+
+<p>Its usage in an actual test:&nbsp;</p>
+
+<pre>
+<code class="language-python">@pytest.mark.django_db
+def test_parse_get_all_sites(vdr_site_list_json_response):
+    result = parse_get_all_sites(vdr_site_list_json_response)
+    assert type(result) == VDRSiteList</code></pre>
+
+<p>Testing getting an error response from the external service. Note we are monkeypatching the retrieval of the authorization token aswell as the network call:</p>
+
+<pre>
+<code class="language-python">@pytest.mark.django_db
+def test_get_single_folder_details_error_response(
+    monkeypatch,
+    generic_user,
+    mock_get_bearer_token,
+    mock_object_with_error_response,
+    remote_system_settings,
+):
+
+    monkeypatch.setattr(SocialToken.objects, "get", mock_get_bearer_token)
+    monkeypatch.setattr(requests, "get", mock_object_with_error_response)
+
+    result = file_and_folder_http_handlers.get_single_folder_details(generic_user, 4)
+    assert type(result) == VDRServiceError</code></pre>
+
+<h2>&nbsp;</h2>
+
+<h2><u>Boto3 </u></h2>
+
+<p>The <a href="https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html">Boto3</a> library is AWS&rsquo;s Python tookit. I&rsquo;ve made use of it here&nbsp;due to my integration streaming the files to an S3 bucket. Crucially, other cloud service providers often make their API&rsquo;s interoperable with AWS&rsquo;s, so for instance, it wouldn&rsquo;t be too difficult to swap S3 out for <a href="https://www.digitalocean.com/products/spaces">Digital Ocean Spaces</a> or use another provider&rsquo;s SDK.</p>
+
+<h2><u>API Proxy </u></h2>
+
+<p>As detailed <a href="../building-an-api-proxy-with-bottle/index.html">in this blog post I made</a>, the API endpoints in the main application, effectively obfuscate the &lsquo;real&rsquo; API which I need to call. I have created a Proxy using the micro framework <a href="https://bottlepy.org/docs/dev/">Bottle</a>. In the long-term this will serve to make the connector more generic. The &lsquo;stub&rsquo; endpoints can remain the same, but the proxy can be switched out depending on VDR provider.</p>
+
+<h2><u>Singleton Object&nbsp;for Settings </u></h2>
+
+<p>Rather than have the settings, (&#39;base&#39; URL for API calls, AWS credentials, etc), be configured by the developers as environment variables, we want the users of this integration to be able to set them. Afterall, they may want to update them&nbsp;in the future&nbsp;to point to a different instance of the VDR Platform, or a different provider altogether. Having said this, we need this configuration to make the external calls, so rather than query the DB each time, we can use <a href="https://memcached.org/">Memcached</a> to cache the settings in memory for faster retrieval. The package <a href="https://github.com/lazybird/django-solo">Django Solo</a> accommodates these settings being a &lsquo;Singleton Object&rsquo; . There will only ever be one &lsquo;settings object&rsquo; stored and&nbsp;the database wont become unnecessary &lsquo;<em>clogged</em>&rsquo;, should users keep switching the settings.</p>
+
+<p><img src="https://user-images.githubusercontent.com/40800258/153038134-ad9e2e3f-4321-4282-b736-c8fdf0b4bc97.png" style="height: 241px; width: 500px;" /></p>
+
+<h2><u>Django AllAuth Custom Provider </u></h2>
+
+<p>The Django AllAuth package&rsquo;s ability to accommodate a custom auth provider is something <a href="../django-allauth-custom-provider/index.html">I&rsquo;ve written about on this blog post</a>. It not only allows us to use the VDR for authentication, but it already takes care of a lot of the token management required for the API calls that the app needs to make.</p>
+
+<p>The Github Repository can be viewed <a href="https://github.com/pj-simpson/VDR-Integration">HERE</a>.&nbsp;</p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="../django-allauth-custom-provider/index.html">Django Allauth Custom Provider</a></li>
+            
+              <li><a href="../building-an-api-proxy-with-bottle/index.html">Building an API Proxy with Bottle</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/d150fadc-87d8-4323-b615-ca806ffe6c6b/";
+this.page.identifier = "d150fadc-87d8-4323-b615-ca806ffe6c6b";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/vagrant/index.html" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/systemd/index.html" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/wsgi/index.html" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/rest/index.html" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/tornado/index.html" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-db-queue/index.html" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/docker/index.html" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/authentication/index.html" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/react/index.html" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/portfolio/index.html" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/flask/index.html" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/integration/index.html" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-ninja/index.html" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/apache/index.html" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/dto/index.html" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/celery/index.html" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/mongodb/index.html" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/gunicorn/index.html" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/web-framework/index.html" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/s3/index.html" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/salvo/index.html" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/workflows/index.html" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/nginx/index.html" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django_1/index.html" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bottle/index.html" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypy_1/index.html" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/attrs/index.html" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-rest-framework/index.html" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/webtest/index.html" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/api/index.html" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/proxy/index.html" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/jenkins/index.html" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/automation/index.html" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pymongo/index.html" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bulma/index.html" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypi/index.html" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pydantic/index.html" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/allauth/index.html" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/oauth/index.html" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="../../static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

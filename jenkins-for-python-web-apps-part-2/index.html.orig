@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="/">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="/about/">About</a>
+        <a class="p-2 text-muted" href="/blog/">Blog</a>
+        <a class="p-2 text-muted" href="/blog/portfolio">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">Jenkins for Python Web Apps Part 2</h2>
+    <p class="blog-post-meta">March 26, 2022, 11:28 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="/blog/tag/bottle/">
+          Bottle
+        </a>
+        , 
+      
+        <a href="/blog/tag/docker/">
+          Docker
+        </a>
+        , 
+      
+        <a href="/blog/tag/jenkins/">
+          Jenkins
+        </a>
+        , 
+      
+        <a href="/blog/tag/webtest/">
+          WebTest
+        </a>
+        
+      
+    </p>
+    <h2><u>Part 2: You&#39;ve now got Jenkins, you have a Python web app.... Now what?</u></h2>
+
+<p>Following on from <a href="https://petersimpson.dev/blog/jenkins-for-python-web-apps/">Part 1</a>, for the purposes of this&nbsp;demonstration I&#39;ve come up with a really simple <a href="https://bottlepy.org/">Bottle</a> application, which lives&nbsp;in a single file, app.py:</p>
+
+<pre>
+<code class="language-python">from bottle import Bottle, run,response, request
+
+app = Bottle()
+
+@app.route('/echo/&lt;text&gt;')
+def echo(text):
+    return {"Your Path Param":text}
+
+@app.route('/queries')
+def query():
+    q = request.query_string
+    if q:
+        return {"You queried":q}
+    else:
+        response.status = 400
+        return "Please supply a query string"
+
+
+if __name__ == "__main__":
+    app.run(host='localhost', port=8080)</code></pre>
+
+<p>The application has got two endpoints, which are both just &#39;echo&#39; servers, one grabbing&nbsp;a <i>path</i> param and the other a query param. The query param endpoint throws an error if one isn&#39;t supplied, which makes testing more interesting. In order to assist our testing, I am making use of the <a href="https://docs.pylonsproject.org/projects/webtest/en/latest/">WebTest</a> package, meaning we don&#39;t have the overhead of running a live HTTP server in order to test the web app, (the package is actually recommended in the Bottle Docs). I&#39;ve used this&nbsp;in conjunction with <a href="https://docs.pytest.org/en/7.1.x/">PyTest</a>, so my test_app.py file is listed below. Note the test_client fixture which returns the WSGI app, wrapped in the testing interface.</p>
+
+<pre>
+<code class="language-python">from webtest import TestApp,AppError
+import app
+import pytest
+
+
+class TestApplication:
+
+    @pytest.fixture
+    def test_client(self):
+        return TestApp(app.app)
+
+    def test_successful_echo(self,test_client):
+        client = test_client
+        response = client.get('/echo/hello')
+
+        assert response.status_code == 200
+
+    def test_echo_no_path_param_supplied(self,test_client):
+        client = test_client
+        with pytest.raises(AppError):
+            client.get('/echo')
+
+    def test_successful_query(self,test_client):
+        client = test_client
+        response = client.get('/queries?foo=bar')
+
+        assert response.status_code == 200
+
+    def test_query_no_params_supplied(self, test_client):
+        client = test_client
+        with pytest.raises(AppError):
+            client.get('/queries')</code></pre>
+
+<p><span id="cke_bm_7892S" style="display: none;">&nbsp;</span>A quick check on my laptop to ensure all is working well:&nbsp;</p>
+
+<pre>
+<code class="language-bash">(venv) $ pytest
+</code></pre>
+
+<pre>
+<code class="language-bash">=========================================================================== test session starts ============================================================================
+platform darwin -- Python 3.8.9, pytest-7.0.1, pluggy-1.0.0
+rootdir: /Users/petersimpson/PycharmProjects/basic-bottle
+collected 4 items                                                                                                                                                          
+
+test_app.py ....                                                                                                                                                     [100%]
+
+============================================================================ 4 passed in 0.19s =============================================================================</code></pre>
+
+<p>Cool! All the tests pass. I&#39;ll get that up-to a Github repository and then its time to turn our attention back&nbsp;to Jenkins.&nbsp;</p>
+
+<hr />
+<p>We are going to create a Jenkins &lsquo;freestyle&rsquo; project. If you are coming to the Jenkins documentation for the first time, there are many options and the difference between freestyle and other types of Jenkins projects may not seem that clearly defined. For the purposes of this demo, the key takeaway should be that this its effectively the most simple type of CI job you can have, just to get started. Click on &lsquo;New Item&rsquo; from the left hand menu and then give the project a name, selecting the &lsquo;Freestyle Project&rsquo; option.</p>
+
+<p>You&rsquo;ll see that there is a lot we could potentially be configuring here, but at the moment, all we want to do is enable Jenkins to pull the code from a Github repository and then give it a series of commands to set up the environment to get the app to be able to have our suite of tests run against it.</p>
+
+<p><br />
+The &lsquo;Source Code Management&rsquo; section of my project looks like this:</p>
+
+<p><img height="475" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/03/26/image_4m1lU5y.png" width="1079" /></p>
+
+<p>My repository is a public one, so no credentials needed, but that can be configured if required. The only other thing we are doing is giving Jenkins a series of commands to execute after its gotten the source code:</p>
+
+<p><img height="261" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/03/26/screenshot-2022-03-26-at-175411.png" width="1074" /></p>
+
+<p>That&#39;s creating and activating a virtual environment, installing the application&#39;s requirements and then running the tests. It might look a bit different to what you expect and thats because the Jenkins shell doesn&#39;t necessarily always play nicely with virtual environments. Some discussion can be found <a href="https://stackoverflow.com/questions/29570085/how-does-one-create-a-python-virtualenv-in-jenkins">HERE</a>. I&#39;ll admit that there was a lot of pain during this step. There is a Jenkins plugin call <a href="https://plugins.jenkins.io/shiningpanda/">Shining Panda</a>, which is supposed to make this easier, but it doesn&#39;t look to be maintained, (its used in the CI chapter of Harry Percival&#39;s excellent <a href="https://www.obeythetestinggoat.com/">Obey The Testing Goat</a> book).&nbsp;Later on we&rsquo;ll be using Docker to improve upon this.</p>
+
+<p>Save the config and then when you are on the page for the project, hit the &#39;Build Now&#39; button from the left hand menu. All being well; a new entry will appear in the build history table and you can inspect it and examine the console output.&nbsp;</p>
+
+<p><img height="895" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/03/26/screenshot-2022-03-26-at-180357.png" width="1228" />So from Jenkins we can now hit a button, and it will grab our source code, install our dependancies and then run the tests. That&#39;s obviously great but ultimately we want more automation and the potential for a more complex sequence of actions.&nbsp;When more than 1 person is contributing to a code base, it&#39;s likely there will be code formatting, lining, static type checking and potentially different types of tests, not to mention tests against different operating systems and Python versions. These could be run automatically at defined intervals or in response to each new commit to the codebase.</p>
+
+<hr />
+<p>For these more involved use-cases, Jenkins has the concept of a <i>Pipeline. Pipelines </i>can be defined via a Jenkinsfile which is checked into source code, giving developers full control over what goes on in Jenkins in a simple and declarative way.&nbsp; It&#39;s much cleaner than the hacky shell commands from earlier, to wrangle a virtualenv into shape. A quick read of the J<a href="https://www.jenkins.io/doc/book/pipeline/docker/">enkins documentation of Docker Pipelines</a> should give you an idea of how powerful it can be.</p>
+
+<p>SSH back into you Digital Ocean Droplet (or other), and <a href="https://docs.docker.com/engine/install/ubuntu/">get docker installed.</a> We then need to get the Jenkins user added to the docker group.</p>
+
+<pre>
+<code class="language-bash">$ sudo usermod -aG docker $USER</code></pre>
+
+<p>We now need to restart Jenkins from the command line (doing it from the Jenkins UI won&rsquo;t be sufficient here).</p>
+
+<pre>
+<code class="language-bash">$ sudo service jenkins restart</code></pre>
+
+<p>Once that&rsquo;s complete, we need to add the Docker and Docker&nbsp;Pipeline plugins to Jenkins. Manage Jenkins &gt; Manage Plugins.</p>
+
+<p>I <i>Dockerize</i> my Bottle app, so that we now have a Dockerfile defining the environment that the app will run in, along with copying the code into it. This is an overtly simplistic example for my toy project, but a more detailed&nbsp;discussion of Docker and Python can be found <a href="https://luis-sena.medium.com/creating-the-perfect-python-dockerfile-51bdec41f1c8">here in the article &#39;Creating the Perfect Python Dockerfile&#39; by Luis Sena</a>.</p>
+
+<pre>
+<code>FROM python:3.8-alpine
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+WORKDIR /app
+
+COPY requirements.txt /app/
+RUN pip install -r requirements.txt
+
+COPY . /app/</code></pre>
+
+<p>And my Jenkinsfile is as simple as:</p>
+
+<pre>
+<code class="language-javascript">pipeline {
+  agent {
+    dockerfile { filename 'Dockerfile' }
+  }
+  stages {
+    stage('test') {
+      steps {
+        sh 'pytest'
+      }
+    }
+  }
+}</code></pre>
+
+<p>The Jenkinsfile initially creates the container we define in our Dockerfile as an &lsquo;agent&rsquo;, which it will use in the different stages of the Pipeline. Now that all of the environment setup is encapsulated in our Dockerfile, all Jenkins needs to do for our &lsquo;test&rsquo; stage is simply run the &#39;pytest&#39; command!</p>
+
+<p>Outrageously simple, but hopefully you can see that underneath &#39;stages&#39;, there could be multiple &#39;stage&#39; declarations, (and then each of those can themselves contain many steps). This is where the complexity can be built out.</p>
+
+<p>Log back into Jenkins, click on &#39;New Item&#39;, but this time ensure you select &#39;Pipeline&#39; rather than freestyle project. Under the Pipeline configuration, select &#39;Pipeline script from SCM&#39; and you can then hook&nbsp;into the same GitHub repository. Jenkins will assume that the Jenkins file is checked into the root folder, but this can also be overridden.&nbsp;&nbsp;</p>
+
+<p>You get a much nicer and more detailed UI here, I think. Here is a successful build:&nbsp;<br />
+<br />
+<img height="517" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/03/27/screenshot-2022-03-27-at-151423.png" width="814" /></p>
+
+<p>The inidvidual stages can be inspected seperately from one another:&nbsp;</p>
+
+<p><img height="453" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/03/27/screenshot-2022-03-27-at-151541.png" width="757" /></p>
+
+<p>So there you have it! I cannot stress enough this is only the beginning. These two posts are intended as merely an &lsquo;up and running&rsquo; tutorial. I&rsquo;ve not really talked about CI more generally, let alone many of the cool and exciting things you can do with Jenkins. These include,(but are by no means limited to): different kinds of triggers, parameterization, interactivity, etc, etc, etc. Also, what is <a href="https://www.jenkins.io/doc/book/blueocean/">Blue Ocean!?</a></p>
+
+<p>Said Bostandoust&rsquo;s <a href="https://github.com/ssbostan/jenkins-tutorial">Tutorial Series</a> looks like a good place to get an overview of more advanced functionality. The ever reliable Full Stack Python site also has a <a href="https://www.fullstackpython.com/continuous-integration.html">CI page</a>.&nbsp;</p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="/blog/jenkins-for-python-web-apps/">Jenkins for Python Web Apps Part 1</a></li>
+            
+              <li><a href="/blog/private-pypi/">Private PyPI</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/7dba268e-27ea-40bd-8e21-4241262cf9c6/";
+this.page.identifier = "7dba268e-27ea-40bd-8e21-4241262cf9c6";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/vagrant/" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/systemd/" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/wsgi/" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/rest/" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/tornado/" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-db-queue/" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/docker/" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/authentication/" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/react/" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/portfolio/" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/flask/" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/integration/" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-ninja/" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/apache/" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/dto/" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/celery/" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/mongodb/" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/gunicorn/" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/web-framework/" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/s3/" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/salvo/" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/workflows/" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/nginx/" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django_1/" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bottle/" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypy_1/" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/attrs/" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-rest-framework/" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/webtest/" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/api/" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/proxy/" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/jenkins/" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/automation/" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pymongo/" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bulma/" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypi/" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pydantic/" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/allauth/" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/oauth/" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="/static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

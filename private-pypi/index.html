@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../../static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="../../static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="../../index.html">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../index.html">About</a>
+        <a class="p-2 text-muted" href="../index.html">Blog</a>
+        <a class="p-2 text-muted" href="../portfolio.html">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">Private PyPI</h2>
+    <p class="blog-post-meta">Feb. 23, 2023, 11:23 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="../tag/bottle/index.html">
+          Bottle
+        </a>
+        , 
+      
+        <a href="../tag/gunicorn/index.html">
+          Gunicorn
+        </a>
+        , 
+      
+        <a href="../tag/pypi/index.html">
+          PyPI
+        </a>
+        
+      
+    </p>
+    <p>As part of my company&rsquo;s &lsquo;<i>Hackathon&rsquo;</i>, some colleagues and I mashed together a Python client library for our REST API. As it was for internal use only, we wanted to make it installable as a package, but not to put it on PyPI. The answer is obviously to run your own version of PyPI!</p>
+
+<p>There is an amazing project called <a href="https://github.com/pypiserver/pypiserver">pypiserver</a>; which is actually a Bottle web app, and is compatible with &lsquo;pip install&rsquo;. There are plenty of tutorials out there as to how to get pypiserver up and running, but none quite how I wanted to do it. Bottle is a WSGI framework, so we&rsquo;d expect to run it behind something like Gunicorn, however the docs don&rsquo;t go into much detail about that and the tutorials I could find relied on Bottle&rsquo;s own WSGI server, (<a href="https://bottlepy.org/docs/dev/deployment.html#server-options">which isn&rsquo;t production quality</a>).</p>
+
+<p>Let&#39;s do a quick speed run. On an Ubuntu VM, I make a virtualenv:</p>
+
+<pre>
+<code class="language-bash">$ python3 -m venv venv</code></pre>
+
+<p>Activate it</p>
+
+<pre>
+<code class="language-bash">$ source venv/bin/activate</code></pre>
+
+<p>Install pypiserver and then Gunicorn</p>
+
+<pre>
+<code class="language-bash">$ pip install pypiserver
+$ pip install gunicorn</code></pre>
+
+<p>And lastly I make the packages directory which is&nbsp;where pypiserver will store the package tar files.&nbsp;</p>
+
+<p>I then start Gunicorn server, (with 4 worker processes).&nbsp;The &#39;root&#39; keyword arg is the absolute path to the aforementioned dir (I&rsquo;m on Oracle cloud here, <em>ubuntu</em> is the user and I&rsquo;m putting all this in a directory called <em>pps</em>):</p>
+
+<pre>
+<code class="language-bash">$ gunicorn -w4 'pypiserver:app(root="/home/ubuntu/pps/packages")'</code></pre>
+
+<pre>
+<code class="language-bash">[2023-01-04 20:24:30 +0000] [56475] [INFO] Starting gunicorn 20.1.0
+[2023-01-04 20:24:30 +0000] [56475] [INFO] Listening at: http://127.0.0.1:8000 (56475)
+[2023-01-04 20:24:30 +0000] [56475] [INFO] Using worker: sync
+[2023-01-04 20:24:30 +0000] [56476] [INFO] Booting worker with pid: 56476</code></pre>
+
+<p>SSH-ing&nbsp;into a new terminal and curl the loopback address on the right port, to check its working as expected:&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ curl http://127.0.0.1:8000/</code></pre>
+
+<pre>
+<code class="language-bash">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+  &lt;head&gt;
+    &lt;meta charset="utf-8"&gt;
+    &lt;title&gt;Welcome to pypiserver!&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1&gt;
+      Welcome to pypiserver!
+    &lt;/h1&gt;
+    &lt;p&gt;
+      This is a PyPI compatible package index serving 0 packages.
+    &lt;/p&gt;
+    &lt;p&gt;
+      To use this server with &lt;code&gt;pip&lt;/code&gt;, run the following command:
+      &lt;pre&gt;
+        &lt;code&gt;pip install --index-url http://127.0.0.1:8000/simple/ PACKAGE [PACKAGE2...]&lt;/code&gt;
+      &lt;/pre&gt;
+    &lt;/p&gt;
+    &lt;p&gt;
+      To use this server with &lt;code&gt;easy_install&lt;/code&gt;, run the following command:
+      &lt;pre&gt;
+        &lt;code&gt;easy_install --index-url http://127.0.0.1:8000/simple/ PACKAGE [PACKAGE2...]&lt;/code&gt;
+      &lt;/pre&gt;
+    &lt;/p&gt;
+    &lt;p&gt;
+      The complete list of all packages can be found &lt;a href="/packages/"&gt;here&lt;/a&gt; or via the &lt;a href="/simple/"&gt;simple&lt;/a&gt; index.
+    &lt;/p&gt;
+    &lt;p&gt;
+      This instance is running version 1.5.1 of the &lt;a href="https://pypi.org/project/pypiserver/"&gt;pypiserver&lt;/a&gt; software.
+    &lt;/p&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+<p>That&rsquo;s all working fine!&nbsp;Now to make it reachable from the outside world, so next we&rsquo;ll reach for Nginx.<br />
+&nbsp;</p>
+
+<hr />
+<h2><strong><u>NGINX</u></strong></h2>
+
+<p><br />
+Nginx is going to be playing the role of a reverse proxy here,&nbsp;forwarding on requests from the public internet to the Gunicorn service.<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ sudo apt update
+$ sudo apt install nginx
+$ sudo ufw allow 'Nginx HTTP’ </code></pre>
+
+<p>I point my domain name at the IP address of my Linux box and can see that we get the Nginx default page.<br />
+<br />
+<img height="618" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2023/02/23/image.png" width="1762" /><br />
+We can change the default nginx conf&nbsp;to point at the local server.<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ sudo nano /etc/nginx/sites-available/default</code></pre>
+
+<pre>
+<code class="language-nginx">server {
+        listen 80;
+        server_name www.peterprivatepypi.xyz;
+        location / {
+                proxy_pass http://127.0.0.1:8000/;
+        }
+}</code></pre>
+
+<p><br />
+<img height="818" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2023/02/23/image_uQ9aaY3.png" width="1438" /><br />
+That&#39;s all very well and good, but the next step is to ensure that the website gets served securely with HTTPS.&nbsp;<br />
+<br />
+&nbsp;</p>
+
+<hr />
+<h2><br />
+<strong><u>LETS ENCRYPT &amp; CERTBOT.</u></strong></h2>
+
+<p>Certbot is a tool which enables sys admins to automate &lsquo;Lets Encrypt&rsquo; certificates to serve sites over HTTPS.</p>
+
+<p>I am going to rename the default config file to the name of my domain and then create a sym link from the sites-available folder to the sites-enabled folder. This is but one convention for running Nginx, which ultimately could allow&nbsp;for multiple sites to be served off the same machine.</p>
+
+<pre>
+<code class="language-bash">$ sudo mv default peterprivatepypi.xyz
+$ sudo ln -s /etc/nginx/sites-available/peterprivatepypi.xyz /etc/nginx/sites-enabled</code></pre>
+
+<p>I install certbot as well as the python3-certbot-nginx package (Hopefully its&nbsp;obvious why that&rsquo;s useful).</p>
+
+<pre>
+<code class="language-bash">$ sudo apt-get install certbot
+$ sudo apt-get install python3-certbot-nginx</code></pre>
+
+<p>The certbot command (with extra config passed to it), goes off and does the hardwork getting the correct certificates for the domain I control:</p>
+
+<pre>
+<code class="language-bash">$ sudo certbot --nginx -d peterprivatepypi.xyz -d www.peterprivatepypi.xyz</code></pre>
+
+<p>Subjective I know, but there is some lovely output:&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code>Saving debug log to /var/log/letsencrypt/letsencrypt.log
+Requesting a certificate for peterprivatepypi.xyz and www.peterprivatepypi.xyz
+
+Successfully received certificate.
+Certificate is saved at: /etc/letsencrypt/live/peterprivatepypi.xyz/fullchain.pem
+Key is saved at:         /etc/letsencrypt/live/peterprivatepypi.xyz/privkey.pem
+This certificate expires on 2023-04-05.
+These files will be updated when the certificate renews.
+Certbot has set up a scheduled task to automatically renew this certificate in the background.
+
+Deploying certificate
+Successfully deployed certificate for peterprivatepypi.xyz to /etc/nginx/sites-enabled/peterprivatepypi.xyz
+Successfully deployed certificate for www.peterprivatepypi.xyz to /etc/nginx/sites-enabled/peterprivatepypi.xyz
+Congratulations! You have successfully enabled HTTPS on https://peterprivatepypi.xyz and https://www.peterprivatepypi.xyz
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+If you like Certbot, please consider supporting our work by:
+ * Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+ * Donating to EFF:                    https://eff.org/donate-le
+</code></pre>
+
+<p>If we inspect the Nginx config file, we can see that Certbot has written to it:&nbsp;</p>
+
+<pre>
+<code class="language-nginx">server {
+	server_name peterprivatepypi.xyz  www.peterprivatepypi.xyz;
+	location / {
+		proxy_pass http://127.0.0.1:8000/;
+	}
+
+    listen [::]:443 ssl ipv6only=on; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/peterprivatepypi.xyz/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/peterprivatepypi.xyz/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+}
+
+server {
+    if ($host = www.peterprivatepypi.xyz) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    if ($host = peterprivatepypi.xyz) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+	listen 80 default;
+	listen [::]:80 default;
+	server_name peterprivatepypi.xyz  www.peterprivatepypi.xyz;
+    return 404; # managed by Certbot
+
+
+}</code></pre>
+
+<p>Nginx will need a restart* but peterprivatepypi is now secure, which is essential for a repository from which people will be downloading software packages!<br />
+<br />
+*</p>
+
+<pre>
+<code class="language-bash">$ sudo systemctl restart nginx</code></pre>
+
+<p><br />
+&nbsp;</p>
+
+<p><img height="790" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2023/02/24/image.png" width="1368" /><br />
+<br />
+&nbsp;</p>
+
+<hr />
+<h2><br />
+<u><strong>TIDYING UP</strong></u><br />
+&nbsp;</h2>
+
+<p>The last remain things that I&#39;d like to do here are; make it so that a password is required to upload packages to my repository, ensure that packages uploaded can be overwritten, (for some reason this isn&rsquo;t the default), and then run the pypiserver, (with all this config), as a systemd service.&nbsp;</p>
+
+<p>The pypiserver docs recommend configuring &lsquo;Apache-like&rsquo; authentication. I&rsquo;m not entirely sure what that means but we install &lsquo;<a href="https://packages.debian.org/stretch/apache2-utils">apache2-utils&rsquo;</a> (extra apache web server plugins), so that we can in turn get &lsquo;<a href="https://httpd.apache.org/docs/2.4/programs/htpasswd.html">htpasswd</a>&rsquo;, (a utility which stores&nbsp;basic authentication credentials in a special file).</p>
+
+<pre>
+<code class="language-bash">$ sudo apt install apache2-utils
+$ pip install passlib</code></pre>
+
+<p>The following command creates the file with the username/password combo (password will be entered as a prompt).</p>
+
+<pre>
+<code class="language-bash">$ htpasswd -sc htpasswd.txt me@example.com</code></pre>
+
+<p>and&nbsp;the Gunicorm process running pypiserver now needs to be told about where to find the user names and passwords, so the startup command is now:&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ gunicorn -w4 'pypiserver:app(root="/home/ubuntu/pps/packages", passwords=“/home/ubuntu/pps/htpasswd.txt”)</code></pre>
+
+<p>&#39;passwords&#39; is a path to wherever you created the htpasswd.txt file!&nbsp;</p>
+
+<p>I can use <a href="https://twine.readthedocs.io/en/stable/">twine</a> to try and upload some nonsense package to idiot-check that&nbsp;the authentication does actually kick in:</p>
+
+<pre>
+<code class="language-bash">$ twine upload --repository-url https://peterprivatepypi.xyz/ dist/*</code></pre>
+
+<pre>
+<code>Uploading distributions to https://peterprivatepypi.xyz/
+Enter your username: 
+WARNING  Your username is empty. Did you enter it correctly?                            
+WARNING  See https://twine.readthedocs.io/#entering-credentials for more information.   
+Enter your password: 
+WARNING  Your password is empty. Did you enter it correctly?                            
+WARNING  See https://twine.readthedocs.io/#entering-credentials for more information.   
+Uploading dummy-0.1.0-py3-none-any.whl
+100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.9/4.9 kB • 00:00 • ?
+WARNING  Error during upload. Retry with the --verbose option for more details.         
+ERROR    HTTPError: 401 Unauthorized from https://peterprivatepypi.xyz/                 
+         Unauthorized </code></pre>
+
+<p>Whilst we are on the subject of uploading, the default config of pypiserver doesn&rsquo;t allow for overwrites of the same package. I want newer versions of the package I am uploading to replace the old ones, so that&rsquo;s an extra argument for Gunicorn:</p>
+
+<pre>
+<code class="language-bash">$ gunicorn -w4 'pypiserver:app(root="/home/ubuntu/pps/packages", passwords=“/home/ubuntu/pps/htpasswd.txt",overwrite="1")</code></pre>
+
+<p>Now seems like a good time to finally make running the pypiserver a system service. I&#39;ve done another blog post where I go into <a href="../a-tour-of-tornado-part-2/index.html">a bit more detail about systemd and python, so read that if you like</a>!&nbsp;<br />
+<br />
+Create the &#39;unit&#39; file:&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ sudo nano /etc/systemd/system/pypi.service</code></pre>
+
+<pre>
+<code class="language-ini">[Unit]
+Description=Gunicorn process for Pypi server
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/home/ubuntu/pps/venv/bin/gunicorn -w4 'pypiserver:app(root="/home/ubuntu/pps/packages")'</code></pre>
+
+<p>Reload the config:&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ sudo systemctl daemon-reload</code></pre>
+
+<p>Start the service:&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ systemctl start pypi.service</code></pre>
+
+<p>...and there you have it; we have a secure&nbsp;instance of pypiserver running under Gunicorn and Nginx which can be easily controlled and monitored through the systemd service manager. For the purposes of my project this worked really well, I was able to push up new versions of my Python package and my colleagues were able to <em>pip install </em>it and use the package in their Python programs!&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ systemctl status pypi.service</code></pre>
+
+<pre>
+<code>● pypi.service - Gunicorn process for Pypi server
+     Loaded: loaded (/etc/systemd/system/pypi.service; static)
+     Active: active (running) since Thu 2023-01-26 23:20:54 UTC; 4 weeks 1 day ago
+   Main PID: 311440 (gunicorn)
+      Tasks: 5 (limit: 1076)
+     Memory: 72.4M
+        CPU: 7min 47.687s
+     CGroup: /system.slice/pypi.service
+             ├─311440 /home/ubuntu/pps/venv/bin/python3 /home/ubuntu/pps/venv/bin/gunicorn -w4 "pypiserver:app(root=\"/home/ubuntu/pps/packages\", passwords=\"/home/ubuntu/pps/htpasswd.txt\",overwrite=\"1\")"
+             ├─311442 /home/ubuntu/pps/venv/bin/python3 /home/ubuntu/pps/venv/bin/gunicorn -w4 "pypiserver:app(root=\"/home/ubuntu/pps/packages\", passwords=\"/home/ubuntu/pps/htpasswd.txt\",overwrite=\"1\")"
+             ├─311443 /home/ubuntu/pps/venv/bin/python3 /home/ubuntu/pps/venv/bin/gunicorn -w4 "pypiserver:app(root=\"/home/ubuntu/pps/packages\", passwords=\"/home/ubuntu/pps/htpasswd.txt\",overwrite=\"1\")"
+             ├─311444 /home/ubuntu/pps/venv/bin/python3 /home/ubuntu/pps/venv/bin/gunicorn -w4 "pypiserver:app(root=\"/home/ubuntu/pps/packages\", passwords=\"/home/ubuntu/pps/htpasswd.txt\",overwrite=\"1\")"
+             └─311445 /home/ubuntu/pps/venv/bin/python3 /home/ubuntu/pps/venv/bin/gunicorn -w4 "pypiserver:app(root=\"/home/ubuntu/pps/packages\", passwords=\"/home/ubuntu/pps/htpasswd.txt\",overwrite=\"1\")"
+
+</code></pre>
+
+<h2><u><strong>TIDBIT:</strong></u></h2>
+
+<p>As inferred Pypi itself isnt pypiserver, but actually a <a href="https://trypyramid.com/">Pyramid</a> web app called Warehouse. The source code can be viewed <a href="https://github.com/pypi/warehouse">HERE</a>.</p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="../building-an-api-proxy-with-bottle/index.html">Building an API Proxy with Bottle</a></li>
+            
+              <li><a href="../jenkins-for-python-web-apps-part-2/index.html">Jenkins for Python Web Apps Part 2</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/f7ab5426-a39d-4bb9-907a-aa546db7c318/";
+this.page.identifier = "f7ab5426-a39d-4bb9-907a-aa546db7c318";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/vagrant/index.html" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/systemd/index.html" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/wsgi/index.html" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/rest/index.html" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/tornado/index.html" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-db-queue/index.html" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/docker/index.html" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/authentication/index.html" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/react/index.html" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/portfolio/index.html" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/flask/index.html" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/integration/index.html" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-ninja/index.html" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/apache/index.html" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/dto/index.html" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/celery/index.html" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/mongodb/index.html" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/gunicorn/index.html" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/web-framework/index.html" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/s3/index.html" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/salvo/index.html" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/workflows/index.html" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/nginx/index.html" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django_1/index.html" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bottle/index.html" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypy_1/index.html" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/attrs/index.html" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-rest-framework/index.html" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/webtest/index.html" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/api/index.html" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/proxy/index.html" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/jenkins/index.html" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/automation/index.html" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pymongo/index.html" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bulma/index.html" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypi/index.html" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pydantic/index.html" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/allauth/index.html" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/oauth/index.html" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="../../static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

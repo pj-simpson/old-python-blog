@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="/">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="/about/">About</a>
+        <a class="p-2 text-muted" href="/blog/">Blog</a>
+        <a class="p-2 text-muted" href="/blog/portfolio">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">Django Allauth Custom Provider</h2>
+    <p class="blog-post-meta">Dec. 18, 2020, 12:42 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="/blog/tag/django_1/">
+          Django
+        </a>
+        , 
+      
+        <a href="/blog/tag/rest/">
+          REST
+        </a>
+        , 
+      
+        <a href="/blog/tag/api/">
+          API
+        </a>
+        , 
+      
+        <a href="/blog/tag/integration/">
+          Integration
+        </a>
+        , 
+      
+        <a href="/blog/tag/oauth/">
+          OAuth
+        </a>
+        , 
+      
+        <a href="/blog/tag/authentication/">
+          Authentication
+        </a>
+        , 
+      
+        <a href="/blog/tag/allauth/">
+          Allauth
+        </a>
+        
+      
+    </p>
+    <p>Django AllAuth is an amazingly useful and popular package for adding 3rd party social authentication to your web app. At some point you may come across a platform with a rest API, which&nbsp;employs OAuth2, that you need to integrate with. I think its fair to say that building this connection entirely from scratch is fairly daunting, and I know this because it represent a significant barrier for a lot of the 3rd party integrators&nbsp;I meet through my work&nbsp;who get in touch with the support team, (often to ask for a different authentication approach all together).&nbsp;<br />
+<br />
+I had been wanting to build an easily shareable&nbsp;example for ages, but had been putting it off for the aforementioned reasons. I&#39;d cobbled together what I consider to be a reasonable workaround,&nbsp;but in the back of my mind I knew it was not....&#39;proper&#39;, (for want of a better phrase). I&nbsp;had used Django AllAuth, and I knew that it did what I wanted it to do, in relation&nbsp;to other well known social&nbsp;platforms, but I wasnt sure how to go about bending it to work with the products we offer.</p>
+
+<p>That was until I peeked at the advanced usage section in their docs:</p>
+
+<blockquote>
+<p>When an existing provider doesn&rsquo;t quite meet your needs, you might find yourself needing to customize a provider.</p>
+
+<p>This can be achieved by subclassing an existing provider and making your changes there. Providers are defined as django applications, so typically customizing one will mean creating a django application in your project. This application will contain your customized urls.py, views.py and provider.py files. The behaviour that can be customized is beyond the scope of this documentation.</p>
+</blockquote>
+
+<p>Ok...that doesn&#39;t sound too bad! I read that as &#39;look at what has already been implemented and just adapt it for your OAuth2 server&#39;. I began poking around in the source code for the various different providers Allauth currently ships with&nbsp;and&nbsp;started to notice snippets of code&nbsp;which resembled what I was already&nbsp;familiar with. After a bit more searching, I found 3 things which were an enourmous help:&nbsp;</p>
+
+<ul>
+	<li><a href="https://raphaelyancey.fr/en/2018/05/28/setting-up-django-oauth2-server-client.html" target="popup">Rapahel Yancey&#39;s Article</a>&nbsp;on setting up both an OAuth server and client, each Django, in separate containers.&nbsp;</li>
+	<li>A Slackoverflow user reccomending a <a href="https://github.com/pennersr/django-allauth/pull/1410/files" target="popup">pull request on the package itself</a>, where Slack is added as an OAuth2 provider.</li>
+	<li>Someone asking for documentation on how to customise a provider and then <a href="https://github.com/pennersr/django-allauth/issues/1478" target="popup">just sharing their own solution</a> anyway.</li>
+</ul>
+
+<p>Between these three examples, I was finally able to implement what had been evading me for months. Here is a walkthrough of the steps I took.Obviously my exampe is specific to my companies product, but you should be able to adapt it to your service.&nbsp;</p>
+
+<hr />
+<p><br />
+Assuming your Django project is created and ready to go, make sure that allauth is installed:&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">pip install django-allauth</code></pre>
+
+<p><br />
+As you may have already gathered from the docs quoted above, your provider needs to be its own Django app, so create that:<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">python manage.py startapp provider</code></pre>
+
+<p><br />
+Next up are the changes to settings. The app needs to be installed, alongside the relevant ones from the allauth package. SITE_ID and AUTHENTICATION_BACKENDS should already be there from the standard setup of allauth. OAUTH SERVER BASE URL is self explanatory! In my case, its a test instance of my company&#39;s product which is going to be providing our authentication. For this example, I will only create a homepage, hence the login and out redirects both being &#39;home&#39;.&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-python">INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'core.apps.CoreConfig',
+    'django.contrib.sites',
+
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'provider',
+
+]
+
+LOGIN_REDIRECT_URL = 'home'
+
+ACCOUNT_LOGOUT_REDIRECT = 'home'
+
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+OAUTH_SERVER_BASEURL = 'https://example.provider.com/example'</code></pre>
+
+<p><br />
+My project is called &#39;properauth&#39; and it also has a &#39;core&#39; app. properauth/urls.py looks like:&nbsp;</p>
+
+<pre>
+<code class="language-python">from django.contrib import admin
+from django.urls import path, include
+from core.views import Home
+
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('accounts/', include('allauth.urls')),
+    path('', Home.as_view(), name='home')
+
+]</code></pre>
+
+<p><br />
+The home view is:&nbsp;</p>
+
+<pre>
+<code class="language-python">from django.views.generic import TemplateView
+
+class Home(TemplateView):
+    template_name = 'home.html'</code></pre>
+
+<p>and that template:&nbsp;</p>
+
+<pre>
+<code class="language-html">{% load socialaccount %}
+
+&lt;h1&gt;Web App with OAuth2 Log In &lt;/h1&gt;
+
+{% if user.is_authenticated %}
+
+&lt;p&gt;Welcome {{ user.email }}, you just logged in via your instance!&lt;/p&gt;
+
+    &lt;form method="post" action="{% url 'account_logout' %}"&gt;
+        {% csrf_token %}
+        &lt;button type="submit"&gt;Log Out&lt;/button&gt;
+    &lt;/form&gt;
+
+{% else %}
+
+    &lt;p&gt;Click Here to log in:&lt;/p&gt;
+
+    &lt;a href="{% provider_login_url 'provider' %}"&gt;Sign In&lt;/a&gt;
+
+{% endif %}</code></pre>
+
+<p>Now that the basics are all in place, and the database has been migrated:</p>
+
+<pre>
+<code class="language-bash">python manage.py makemigrations
+python manage.py migrate</code></pre>
+
+<p>.....lets get down to actually creating the custom provider!&nbsp;</p>
+
+<hr />
+<p>The views file inside my provider app looks like this:&nbsp;</p>
+
+<pre>
+<code class="language-python">import requests
+from allauth.socialaccount.providers.oauth2.views import (OAuth2Adapter, OAuth2LoginView, OAuth2CallbackView)
+from .provider import CustomProvider
+from django.conf import settings
+
+
+class CustomAdapter(OAuth2Adapter):
+    provider_id = CustomProvider.id
+
+    access_token_url = f'{settings.OAUTH_SERVER_BASEURL}/api/oauthtoken'
+    profile_url = f'{settings.OAUTH_SERVER_BASEURL}/api/useraccount/'
+
+    authorize_url = f'{settings.OAUTH_SERVER_BASEURL}/authorization'
+
+    def complete_login(self, request, app, token, **kwargs):
+        headers = {'Authorization': f'Bearer {token.token}', 'Accept':'application/json'}
+        useremail = kwargs['response']['useremail']
+        resp = requests.get(self.profile_url + f'{useremail}?type=email', headers=headers)
+        extra_data = resp.json()
+        return self.get_provider().sociallogin_from_response(request, extra_data)
+
+
+oauth2_login = OAuth2LoginView.adapter_view(CustomAdapter)
+oauth2_callback = OAuth2CallbackView.adapter_view(CustomAdapter)</code></pre>
+
+<p><br />
+The key elements here are:&nbsp;</p>
+
+<p>&#39;access_token_url&#39; : This is the url that allauth will be querying to get the access tokens.</p>
+
+<p>&#39;profile_url&#39; : This is the url that we will use to get our user detail. If you compare my views file to those in the resoures I referneced above, you&#39;ll notice that my provider makes it slightly less easy than other providers to get this. The endpoint requires a useremail parameter to get the correct details. We can get this from the token call (which is pass as kwargs to the complete_login() function.The service returns XML by default, so I am also adding an &#39;Accept&#39; header because&nbsp;allauth expects json here (as you will see in the next file).&nbsp;</p>
+
+<p>&#39;authorize_url&#39; : This is the url where we get the &#39;authorization code&#39; from in <a href="https://tools.ietf.org/html/rfc6749#section-1.3.1">THIS </a>part of the OAuth2 flow.&nbsp;</p>
+
+<p><br />
+Next up we move onto the &#39;provider.py&#39; file which is also in the provider app:<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-python">from allauth.socialaccount import providers
+from allauth.socialaccount.providers.base import ProviderAccount
+from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
+
+
+class CustomAccount(ProviderAccount):
+    pass
+
+
+class CustomProvider(OAuth2Provider):
+
+    id = 'provider'
+    name = 'ProviderOAuth2 Provider'
+    account_class = CustomAccount
+
+    def extract_uid(self, data):
+        return str(data['userid'])
+
+    def extract_common_fields(self, data):
+        return dict(
+                    email=data['email'],
+                    first_name=data['firstname'],
+                    last_name=data['lastname'],)
+
+    # def get_default_scope(self):
+    #     pass
+
+
+providers.registry.register(CustomProvider)</code></pre>
+
+<p>&nbsp;</p>
+
+<p>I am commenting out &#39;get_default_scope()&#39; because we do not use &#39;scope&#39; in our product at work. The extract methods are pulling data out the structure that we get from querying the &#39;profile_url&#39; in the views file.&nbsp;<br />
+<br />
+Lastly, we take care of the provider/urls.py:&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-python">from allauth.socialaccount.providers.oauth2.urls import default_urlpatterns
+from .provider import CustomProvider
+
+urlpatterns = default_urlpatterns(CustomProvider)</code></pre>
+
+<p>&nbsp;</p>
+
+<p>Now the custom provider has been taken care of, we can register the social application in our Django app, and our API consumer at the external service&#39;s end.&nbsp;</p>
+
+<p>Create a superuser, so that you can log in to the Django admin:&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">python manage.py createsuperuser</code></pre>
+
+<p><br />
+Login to the admin app and then click on &#39;Add&#39; next to social application:</p>
+
+<p><br />
+&nbsp;<img src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2020/12/18/django_admin.png" style="width: 600px; height: 606px;" /><br />
+<br />
+The provider is added like so:&nbsp;<br />
+<img src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2021/10/28/social_application_2.PNG" style="width: 800px; height: 388px;" /><br />
+<br />
+<br />
+You&#39;ll notice we have a client id and secret key here. We retrieve these when we register the API consumer at the Provider end:&nbsp;<br />
+<br />
+<img height="378" src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2020/12/18/image.png" width="573" /><br />
+<br />
+The full redirect URL value here is: &#39;http://127.0.0.1:8000/accounts/provider/login/callback/&#39;.&nbsp;<br />
+<br />
+That should be it now. If we run the server, these are the results:</p>
+
+<ol>
+	<li>Unauthenticated user hits the provider login url</li>
+	<li>They are redirected to the provider instance. if they do not have an authenticated session there, they will be prompted to login and then they hit the &#39;Allow/Deny&#39; screen.&nbsp;</li>
+	<li>Upon allowing the api consumer to access their&nbsp;account they are then redirected back to the Django application. Under the hood, the provider passes a code back to django allauth which allows it to make&nbsp;an access token call, as well as the subsequent call to grab the user details.&nbsp;</li>
+	<li>&nbsp;The user is now authenticated in the Django app, courtsey of my company&#39;s product.&nbsp;Check the Admin app again:&nbsp;</li>
+</ol>
+
+<p><img src="https://peter-object-store.fra1.digitaloceanspaces.com/media/uploads/2021/10/28/django_social_user_2.PNG" style="width: 800px; height: 388px;" /></p>
+
+<p><br />
+Now the log in and out flow is applied, it should be clear how we can proceed integrating further rest calls from our Django application to the provider&#39;s service. Utilising all-auth&#39;s ability to easily have custom&nbsp;providers&nbsp;was actually a fairly painless process. Now all-auth is taking care of getting an external system to provide&nbsp;my authentication, I can concentrate on building a second, more complete integration with the Legal Tech SaaS Product my company offers!&nbsp;<br />
+&nbsp;</p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="/blog/vdr-platform-s3-connector/">VDR Platform - S3 Connector</a></li>
+            
+              <li><a href="/blog/building-an-api-proxy-with-bottle/">Building an API Proxy with Bottle</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/e94007a1-8abd-4f8f-97cc-4eb8684d6833/";
+this.page.identifier = "e94007a1-8abd-4f8f-97cc-4eb8684d6833";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/vagrant/" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/systemd/" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/wsgi/" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/rest/" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/tornado/" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-db-queue/" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/docker/" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/authentication/" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/react/" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/portfolio/" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/flask/" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/integration/" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-ninja/" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/apache/" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/dto/" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/celery/" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/mongodb/" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/gunicorn/" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/web-framework/" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/s3/" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/salvo/" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/workflows/" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/nginx/" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django_1/" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bottle/" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypy_1/" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/attrs/" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-rest-framework/" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/webtest/" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/api/" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/proxy/" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/jenkins/" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/automation/" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pymongo/" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bulma/" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypi/" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pydantic/" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/allauth/" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/oauth/" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="/static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

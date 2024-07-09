@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="/static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="/static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="/">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="/about/">About</a>
+        <a class="p-2 text-muted" href="/blog/">Blog</a>
+        <a class="p-2 text-muted" href="/blog/portfolio">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">(Toy) Python Web Framework</h2>
+    <p class="blog-post-meta">April 21, 2022, 3:50 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="/blog/tag/wsgi/">
+          WSGI
+        </a>
+        , 
+      
+        <a href="/blog/tag/web-framework/">
+          Web Framework
+        </a>
+        
+      
+    </p>
+    <h2><u>Legal Tech API Support War Stories&nbsp;</u></h2>
+
+<p>Having worked for a Legal Tech SaaS platform for a while now, it&rsquo;s clear to me that there are&nbsp;a lot of people in our client&#39;s organisations, who have a great <i>foundational</i>&nbsp;knowledge of the of the web (HTML, CSS, JavaScript) and despite not necessarily being developers&nbsp;<i>per se, </i>they are still able to create web pages, usually via some editor already embedded into a web-based platform or via a &lsquo;<i>no-or-low-code</i>&rsquo; tool.</p>
+
+<p>Obviously that&#39;s great, but as a Legal Technologist, you will likely want to be able to populate web pages with data from the different platforms which your business uses and there may not be a clear path as to how to achieve this.All too often, consuming a REST API is something which they may not have done before, and it can quickly become a point of frustration. Further to&nbsp;this, the overhead of authenticating and managing tokens, etc, as well as stepping through all of the fiddly bits of constructing&nbsp;HTTP requests&nbsp;can seem overwhelming at first.<br />
+<br />
+This got me thinking;&nbsp;is there a better way to&nbsp;get these types of&nbsp;<i>web-curious&nbsp;</i>users up and running more quickly, without necessarily giving them a crash course in becoming a full-stack developer?</p>
+
+<hr />
+<h2><u>Web Framework For Non-Developers</u></h2>
+
+<p>The trend in Python web development frameworks of late has decidedly been towards &#39;micro&#39; frameworks, which pertain to be non-opinionated and&nbsp;give the developer as much flexibility as possible. But what if one was to design a web development framework for non-developers? &#39;Magicals&#39; suddenly become a good thing. In this case,&nbsp;the proposed framework could abstract away a lot of the grubbing around required to get an integration with an external system up and running, leaving your Legal Technologists as much freedom as possible to do what they actually want to be doing, which is creating informative and beautiful web pages using the technologies that they are familiar with.&nbsp;<br />
+<br />
+This lead me to create a Python based micro-framework which I&#39;ve dubbed &#39;<b><i>HQSP</i></b>&#39;. Despite Python being my main interest, I could legitimately claim it to be a strategic choice here, as its a&nbsp;<i>high level</i>, dynamically typed and interpreted language, meaning its considered quicker and easier to learn than many others. A user with decent working knowledge of JavaScript, (for instance), should be able to pick up the basics without issue.</p>
+
+<p>For this reason, HQSP only supports &#39;function&#39; based controllers. It is easy to understand a Python function. A user developing an application in the framework, won&rsquo;t&nbsp;have to wrap their head around Object-Oriented Programming. A function simply&nbsp;receives a request and returns a response... that&#39;s it, (and <a href="https://spookylukey.github.io/django-views-the-right-way/">arguably how it should be</a>)!</p>
+
+<h2><br />
+<font><u>EXAMPLE APP BUILT WITH HQSP</u></font></h2>
+
+<p>Here is a simple app which consumes the REST API of Virtual Data Room provider, displaying the details of a specific VDR.</p>
+
+<pre>
+<code class="language-python"># demo.py
+
+from hqsp import Application
+import requests as http_handler
+
+app = Application()
+
+@app.set_headers
+def dataroom_detail(headers, base_url, request, response, vdr_id):
+
+    external_response = http_handler.get(
+        f"{base_url}/api/1/dataroom/{vdr_id}", headers=headers
+    )
+
+    response.body = app.template("VDR.html", context=external_response.json())
+
+
+
+app.add_routes({"/site/{vdr_id}": dataroom_detail})</code></pre>
+
+<p>&nbsp;</p>
+
+<p>The framework user declares an Application object,&nbsp;and then they are able to use a decorator on their functions, which magically pass&nbsp;in everything needed to make the API call to the external service. You will then see that the response&#39;s body is set to be the application&#39;s template method, which loads together the html&nbsp;file and a JSON structure of the data returned from the API call. Under the hood, the Framework is leveraging the popular&nbsp;<a href="https://palletsprojects.com/p/jinja/">Jinja2</a>&nbsp;templating language, as well as <a href="http://whitenoise.evans.io/en/stable/">Whitenoise</a> for serving static files.</p>
+
+<p>Speaking of this, static resources live underneath the &#39;Static&#39; directory, HTML Templates live under the &#39;Templates&#39; directory. To labour an earlier point, there is no flexibility here. In terms of organising these files, HQSP is rigid and opinionated, so that its users are concentrating on the<i>&nbsp;&#39;building the App&#39;</i>&nbsp;part of the process, rather than something like&nbsp;<i>&#39;overriding the default path for static files</i>&#39;,etc, etc.&nbsp;</p>
+
+<p>I have downloaded the Bootstrap framework, with the minified asset bundles, so along with an html template, the entire structure for my &lsquo;app&rsquo; looks like this:</p>
+
+<pre>
+<code class="language-bash">static
+|--css
+   |--bootstrap.min.css
+|--js
+   |--bootstrap.min.css
+
+templates
+|—sites.html
+
+demo.py</code></pre>
+
+<p>In the same top level directory I have a&nbsp;<b>settings.ini</b>&nbsp;file, which effectively just captures the details of an initial (manual) OAuth token call.</p>
+
+<pre>
+<code class="language-ini">[AUTH]
+access_token = REDACTED_your_token_here
+access_expiry = 2592000
+refresh_token= REDACTED_your_token_here
+refresh_expiry = 2628000
+token_type = bearer
+user = peter.simpson@blahblahexample.com
+
+[INSTANCE]
+host = https://legal.platform.com/api
+
+[APP]
+name = demo
+</code></pre>
+
+<p>The last thing to mention from the demo.py file is the &#39;add_routes&#39; method. This creates a mapping from a path to a function and you&#39;ll notice that there is a path parameter in there {site_id}, so the page will dynamically load&nbsp;different data depending on the value that gets passed to it.&nbsp;</p>
+
+<p>HQSP conforms to the <a href="https://en.wikipedia.org/wiki/Web_Server_Gateway_Interface" target="popup">WSGI standard for Python web frameworks</a>, so it can be run by any WSGI Server. I choose the popular <a href="https://gunicorn.org/" target="popup">Gunicorn</a>, which means the Application can be run like so:&nbsp;<br />
+&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ gunicorn demo:app</code></pre>
+
+<p>&nbsp;</p>
+
+<p>Here are the results:&nbsp;<br />
+<br />
+<img height="535" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/05/10/screenshot-2022-04-19-at-154027.png" width="666" /><br />
+&nbsp;</p>
+
+<p>Hardly very visually impressive, but hopefully the intent is clear. Your Legal Tech team can now&nbsp;write simple Python functions to fetch data from the given legal tech provider and surface it into HTML templates, along with any stylings and JavaScript required. A much more complex application could easily be extended from this core set of functionality.&nbsp;</p>
+
+<p>As mentioned,&nbsp;the framework also takes care of token refreshment, but a user purposefully doesn&#39;t&nbsp;know anything about that. So long as the function controllers are decorated with&nbsp;<b><i>&#39;@app.set_headers</i></b>&#39;, behind the scenes:&nbsp;HQSP works out whether or not a refresh is required and persists the tokens to&nbsp;storage.&nbsp;</p>
+
+<hr />
+<h2><u>Concluding Thoughts</u></h2>
+
+<p>All in all, the actual HQSP framework is less than a few hundred lines of code. Its mostly just gluing together pre-existing open source tools from the Python world. These tend to be packages for dealing with a single well trodden Web programming problem.&nbsp;<a href="https://webob.org/">WebOb&nbsp;</a>provides the HTTP Objects, <a href="https://jinja.palletsprojects.com/en/3.1.x/">Jinja2</a> (already mentioned) does the templating, whilst&nbsp;<a href="http://whitenoise.evans.io/en/stable/">WhiteNoise&nbsp;</a>serves static files. I must give credit to the blog series &lsquo;<a href="https://rahmonov.me/posts/write-python-framework-part-one/">How to write a Python web framework</a>&rsquo; by Jahongir Rahmonov. My framework undoubtedly heavily resembles the one built as part of those tutorials. <a href="https://github.com/rahmonov/alcazar">Alcazar</a> is a web framework which extends the ideas from those initial 4 blog posts.</p>
+
+<p>Worth mentioning that I have also made 0 security considerations, hence it being a self-declared &#39;prototyping&#39; framework. These Applications are intended only to be served locally.&nbsp;Once its users have their POCs, the idea would currently be that they would hand over&nbsp;to their developers, who could then build the ideas out in the MVC framework of their choice.&nbsp;</p>
+
+<p>HQSP was built with a particular legal tech vendor in mind, <u>but I have obfuscated who exactly that is</u>. The &#39;auth&#39; part of the framework was made to work for their particular authentication &#39;flow&#39;, but <a href="https://github.com/pj-simpson/HQSP">the repository</a> could easily be forked and that part of the code ripped out and/or re-written for a different system. Infact I undoubtedly think I&#39;ll revist this and use it as the basis of a more fully fledged project at some point in the future.&nbsp;<br />
+&nbsp;</p>
+
+<hr />
+<p>Web Frameworks are plentiful and essentially represent a problem already solved. The only real reason to build one would be to either learn how they work (which is a valuable exercise in and of itself), or if you have a use-case so specific that it can be better served with a refinement of an already existing paradigm. I hope that the notion of a&nbsp;<b>framework for non developers wanting to leverage a particular API</b>, is clear.</p>
+
+<p>&nbsp;</p>
+
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/7c7f96aa-d67a-4822-8772-24319e46a1c1/";
+this.page.identifier = "7c7f96aa-d67a-4822-8772-24319e46a1c1";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/vagrant/" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/systemd/" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/wsgi/" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/rest/" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/tornado/" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-db-queue/" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/docker/" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/authentication/" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/react/" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/portfolio/" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/flask/" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/integration/" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-ninja/" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/apache/" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/dto/" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/celery/" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/mongodb/" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/gunicorn/" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/web-framework/" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/s3/" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/salvo/" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/workflows/" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/nginx/" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django_1/" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bottle/" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypy_1/" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/attrs/" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/django-rest-framework/" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/webtest/" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/api/" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/proxy/" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/jenkins/" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/automation/" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pymongo/" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/bulma/" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pypi/" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/pydantic/" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/allauth/" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="/blog/tag/oauth/" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="/static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>

@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../../static/img/favicon.a79516f6914b.ico">
+  <title>Peter's Site</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="../../static/css/base.96ba9f3a47df.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/open-iconic/1.1.1/font/css/open-iconic-bootstrap.min.css" integrity="sha256-BJ/G+e+y7bQdrYkS2RBTyNfBHpA9IuGaPmf9htub5MQ=" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&family=Source+Sans+Pro:wght@300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/styles/monokai_sublime.35229da634f5.css" />
+    <script src="../../static/ckeditor/ckeditor/plugins/codesnippet/lib/highlight/highlight.pack.977b8eecd330.js"></script>
+</head>
+<script>hljs.initHighlightingOnLoad();</script>
+<body>
+
+<div class="container">
+  <header class="blog-header py-3">
+    <div class="row flex-nowrap justify-content-between align-items-center">
+      <div class="col-4 text-left">
+        <a class="blog-header-logo text-dark" href="../../index.html">Peter Simpson</a>
+      </div>
+      <div class="col-4 d-flex justify-content-end align-items-center">
+      
+      
+      </div>
+    </div>
+  </header>
+
+  <div class="nav-scroller py-1 mb-2">
+    <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../index.html">About</a>
+        <a class="p-2 text-muted" href="../index.html">Blog</a>
+        <a class="p-2 text-muted" href="../portfolio.html">Portfolio</a>
+        
+        <a class="p-2 text-muted" href="https://github.com/pj-simpson">Github</a>
+    </nav>
+  </div>
+</div>
+
+<main role="main" class="container">
+  <div class="row justify-content-between">
+  <div class="col-md-8 blog-main">
+        
+
+    
+
+        <div class="blog-post">
+    <h2 class="blog-post-title">Jenkins for Python Web Apps Part 1</h2>
+    <p class="blog-post-meta">March 26, 2022, 4:23 p.m. by Peter_Simpson</p>
+    <p class="blog-post-meta">
+      <span class="oi oi-tags" title="oi-tags" aria-hidden="true"></span> Tags:
+      
+        <a href="../tag/bottle/index.html">
+          Bottle
+        </a>
+        , 
+      
+        <a href="../tag/jenkins/index.html">
+          Jenkins
+        </a>
+        , 
+      
+        <a href="../tag/nginx/index.html">
+          Nginx
+        </a>
+        
+      
+    </p>
+    <p>I have configured remote Jenkins servers in the past, but never documented the process, so I figured it was about time that I did. The Jenkins &amp; Python Web App tutorials I could find were a little piecemeal. Whilst there does seems to be plenty out there, and some of them are incredibly informative, they do also tend to be a little on the&nbsp;<i>thin</i>&nbsp;side. Jenkins alone is an enormous subject, not to mention the concept of Continuous Integration itself, so it stands to reason that nobody would want to bite all that off, as it could almost be an entire book in itself.</p>
+
+<p>I must stress that this blog post details only how I have done it and <u><em>what works for my purposes</em></u>. This is far from a definitive guide, (or even a deep-dive), but it will show you how to get Jenkins running on a remote server and you pushing your Python web app&rsquo;s code up to it from source control.</p>
+
+<h2><u>Part 1: Setting up the infrastructure.&nbsp;</u></h2>
+
+<p>I use Digital Ocean to create a <a href="https://www.digitalocean.com/products/droplets">server running Ubuntu 20.04 (LTS) x64</a> and then <a href="https://docs.digitalocean.com/products/droplets/how-to/connect-with-ssh/">SSH</a> in. You could also just connect through Digital Ocean&rsquo;s &lsquo;in browser&rsquo; console, if you would prefer. Jenkins is a Java app, so the first thing I do is ensure that we have Java. <a href="https://www.jenkins.io/doc/administration/requirements/java/">HERE</a> details Jenkins Java requirements.</p>
+
+<pre>
+<code class="language-bash">$ sudo apt update
+$ sudo apt install openjdk-11-jre
+$ java -version</code></pre>
+
+<pre>
+<code class="language-bash">openjdk version "11.0.14" 2022-01-18
+OpenJDK Runtime Environment (build 11.0.14+9-Ubuntu-0ubuntu2.20.04)
+OpenJDK 64-Bit Server VM (build 11.0.14+9-Ubuntu-0ubuntu2.20.04, mixed mode, sharing)</code></pre>
+
+<p>Now we can install Jenkins itself. Guides are <a href="https://www.jenkins.io/doc/book/installing/linux/#debianubuntu">HERE</a></p>
+
+<pre>
+<code class="language-bash">$ curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io.key | sudo tee \
+  /usr/share/keyrings/jenkins-keyring.asc &gt; /dev/null
+$ echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list &gt; /dev/null
+$ sudo apt-get update
+$ sudo apt-get install jenkins</code></pre>
+
+<p>You should now be able to (insecurely) connect to Jenkins, by typing in your server&rsquo;s public facing ip and going to the default port which Jenkins runs on (8080).<br />
+<br />
+<img height="917" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/03/26/screenshot-2022-03-06-at-204256.png" width="1246" /><br />
+&nbsp;</p>
+
+<p>Obviously we will aim to do something about the lack of encryption in future steps, but you are here now, so you may as well complete the setup.</p>
+
+<p>Obtain the initial admin password from the location displayed on the screen to &lsquo;unlock&rsquo;. I do so by printing the password to the terminal:</p>
+
+<pre>
+<code class="language-bash">$ cat /var/lib/jenkins/secrets/initialAdminPassword</code></pre>
+
+<p>Next there are some bog-standard steps to&nbsp;create an&nbsp;admin account and voila&hellip; Welcome to Jenkins!</p>
+
+<p><img height="734" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/03/26/screenshot-2022-03-06-at-204714_QHF9UST.png" width="1675" /><br />
+&nbsp;</p>
+
+<p>Ultimately we don&rsquo;t want to be typing the IPV4address and port into a browser to get to our Jenkins instance. We want to give it a domain name and connect over https.</p>
+
+<p>Anyone who has ever deployed a web app will know that there are many steps to take here, so I&rsquo;ll breeze through them. First I get a (cheap!) domain name. By chance I have &rsquo;<em>peter-glab.xyz</em>&#39; lying around, (from when I attempted to setup a self-hosted Gitlab instance!), so I&rsquo;ll use that.</p>
+
+<p>I&rsquo;m using Namecheap, and I <i>point</i> the domain at the Digital Ocean Droplet&rsquo;s IP address. If using different providers, just search your domain name company and your IAAS company, there is probably a guide somewhere!</p>
+
+<hr />
+<p>Next I&rsquo;m going to put some certificates on the server, so we can serve over https. Im going to be using self signed certificate here, and the reason for this is because its only going to be me using this server. I know that ultimately the entire point of continuous integration is to better facilitate&nbsp;collaboration on codebases, but for the purposes of this demo, it&rsquo;s not necessarily the most important thing that a 3rd party can validate the servers identity. It is, however, important that&nbsp;the communication between me and Jenkins is encrypted and a self signed certificate allows for that.</p>
+
+<p>I am going to be using <a href="https://www.nginx.com/">Nginx</a> as a <a href="https://www.nginx.com/resources/glossary/reverse-proxy-server/">reverse proxy</a> in-front of Jenkins, and it will be Nginx that &lsquo;uses&#39;&nbsp;the certs, so first I create this directory:</p>
+
+<pre>
+<code class="language-bash">$ mkdir /etc/nginx/ssl</code></pre>
+
+<p>Then I create the self signed certificates using <a href="https://www.openssl.org/">OpenSSL</a> (which has come pre-installed on Ubuntu).&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/nginx/ssl/nginx.key -out /etc/nginx/ssl/nginx.crt</code></pre>
+
+<p>A break down of all these commands and what they are doing can be found in this tutorial <a href="https://www.digitalocean.com/community/tutorials/how-to-create-an-ssl-certificate-on-nginx-for-ubuntu-14-04">HERE</a>.&nbsp;</p>
+
+<p>Via the&nbsp;command line, OpenSSL will ask you to go through a bunch of questions, which are utilised in the creation of the certificate. Some of these can be skipped, but crucially when it asks for &lsquo;the common name&rsquo;, that needs to be your domain, (so for me that&rsquo;s &lsquo;<i>peter-glab.xyz</i>&#39;)</p>
+
+<p><span id="cke_bm_3632S" style="display: none;">&nbsp;</span>Now its time to install the aforementioned Nginx:&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ sudo apt-get install nginx</code></pre>
+
+<p>If we take a look at the main Nginx configuration file, which can be found under &lsquo;/etc/nginx/nginx.conf&rsquo;, we can see these lines under &lsquo;Virtual Host Configs&rsquo;:</p>
+
+<pre>
+<code class="language-nginx">... 
+
+include /etc/nginx/conf.d/*.conf;
+include /etc/nginx/sites-enabled/*;
+
+...</code></pre>
+
+<p>The concept of <em>virtual hosts</em> is effectively&nbsp;&lsquo;servers-within-a-server&rsquo;. We have our Digital Ocean droplet, which we could conceive as a &lsquo;server&rsquo; itself, but Nginx allows us to route incoming requests to&nbsp;more than one web application, each running on the&nbsp;single machine.&nbsp; &lsquo;Sites-enabled&rsquo; is one convention to use, i.e you have many &lsquo;sites&rsquo; on a given host, but for simplicities sake:&nbsp;I&rsquo;m just going to create a config&nbsp;file under that conf.d folder. From the point of view of the nginx.conf file, its looking for the same <i>types</i> of files in either location (via that &#39;include&#39; directive). Some discussion on what exactly the best practice is can be read <a href="https://serverfault.com/questions/527630/difference-in-sites-available-vs-sites-enabled-vs-conf-d-directories-nginx">HERE</a>.&nbsp;</p>
+
+<pre>
+<code class="language-bash">$ touch /etc/nginx/conf.d/peter-glab.xyz.conf</code></pre>
+
+<p>The internals of which look like so:&nbsp;</p>
+
+<pre>
+<code class="language-nginx">server {
+    listen 80 default_server;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+
+server {
+
+    listen 443;
+    server_name peter-glab.xyz;
+
+    ssl_certificate      /etc/nginx/ssl/nginx.crt;
+    ssl_certificate_key  /etc/nginx/ssl/nginx.key;
+
+    ssl on;
+    ssl_session_cache  builtin:1000  shared:SSL:10m;
+    ssl_protocols  TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers HIGH:!aNULL:!eNULL:!EXPORT:!CAMELLIA:!DES:!MD5:!PSK:!RC4;
+    ssl_prefer_server_ciphers on;
+
+    access_log      /var/log/nginx/jenkins.access.log;
+    error_log       /var/log/nginx/jenkins.error.log;
+
+    location / {
+
+      proxy_set_header        Host $host;
+      proxy_set_header        X-Real-IP $remote_addr;
+      proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header        X-Forwarded-Proto $scheme;
+
+    
+      proxy_pass          http://localhost:8080;
+      proxy_read_timeout  90;
+
+      proxy_redirect      http://localhost:8080 https://peter-glab.xyz;
+    }
+}
+</code></pre>
+
+<p>I want to&nbsp;stress that this definitely isn&rsquo;t an Nginx tutorial, but a whistle stop tour of this file is as follows:&nbsp;We are telling Nginx to&nbsp;listen for incoming requests on &lsquo;<i>the internet</i>&rsquo; ports (80 for http, 443 for https), and forwarding those requests to where Jenkins is running locally. You&rsquo;ll also notice that we are using the self signed certs and are setting some headers along with declaring a location for&nbsp;log files and forcing http requests to use https.</p>
+
+<p>Check the Nginx configuration files and then restart it (always do both of these steps after fiddling with Nginx).</p>
+
+<pre>
+<code class="language-bash">$ sudo nginx -t
+</code></pre>
+
+<pre>
+<code class="language-bash">nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful</code></pre>
+
+<pre>
+<code class="language-nginx">$ sudo service nginx restart</code></pre>
+
+<p>Finally, we need to change a setting from within the Jenkins UI. When trying to reach it, your browser will likely be showing you an error like this:</p>
+
+<p><img height="483" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/03/26/image.png" width="693" /></p>
+
+<p>This is because we are using a self signed certificate, rather than one signed by a certificate authority that the browser trusts. In the case of a service we control, this is fine and we can instruct our browser to ignore this particular warning.</p>
+
+<p>Click on &lsquo;Manage Jenkins&rsquo; then &lsquo;Configure System&rsquo; and find the Jenkins URL form field. This will stop a warning about the <a href="https://docs.cloudbees.com/docs/cloudbees-devoptics/latest/install-guide/install-troubleshoot">reverse proxy being broken</a>, which you may be getting alerts about.</p>
+
+<p><img height="838" src="https://fra1.digitaloceanspaces.com/peter-object-store/media/uploads/2022/03/26/screenshot-2022-03-26-at-171454.png" width="579" /><br />
+<br />
+And that&#39;s a wrap! We now have a Jenkins instance running on a VPS, which is accessible over https on the public internet. <a href="../jenkins-for-python-web-apps-part-2/index.html">Part 2</a> will focus on how to actually use this with a Python Web App.</p>
+
+    
+        You may also like:
+        <ul>
+            
+              <li><a href="../jenkins-for-python-web-apps-part-2/index.html">Jenkins for Python Web Apps Part 2</a></li>
+            
+              <li><a href="../private-pypi/index.html">Private PyPI</a></li>
+            
+        </ul>
+    
+
+   
+</div>
+
+
+    <hr>
+
+
+
+        <div id="disqus_thread"></div>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://localhost:8000/blog/bc0be500-509f-49d8-a385-329761fe6110/";
+this.page.identifier = "bc0be500-509f-49d8-a385-329761fe6110";
+};
+
+
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+s.src = 'https://peters-personal-blog-1.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+    
+
+
+
+
+    </div>
+
+    
+    
+
+
+<aside class="col-md-3 blog-sidebar">
+ <div class="p-4 mb-3 bg-light rounded text-right">
+    <h5>Tags:</h5>
+    
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/vagrant/index.html" class="badge badge-primary">
+                Vagrant
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/systemd/index.html" class="badge badge-primary">
+                Systemd
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/wsgi/index.html" class="badge badge-primary">
+                WSGI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/rest/index.html" class="badge badge-primary">
+                REST
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/tornado/index.html" class="badge badge-primary">
+                Tornado
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-db-queue/index.html" class="badge badge-primary">
+                Django DB Queue
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/docker/index.html" class="badge badge-primary">
+                Docker
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/authentication/index.html" class="badge badge-primary">
+                Authentication
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/react/index.html" class="badge badge-primary">
+                React
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/portfolio/index.html" class="badge badge-primary">
+                Portfolio
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/flask/index.html" class="badge badge-primary">
+                Flask
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/integration/index.html" class="badge badge-primary">
+                Integration
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-ninja/index.html" class="badge badge-primary">
+                Django Ninja
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/apache/index.html" class="badge badge-primary">
+                Apache
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/dto/index.html" class="badge badge-primary">
+                DTO
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/celery/index.html" class="badge badge-primary">
+                Celery
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/mongodb/index.html" class="badge badge-primary">
+                MongoDB
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/gunicorn/index.html" class="badge badge-primary">
+                Gunicorn
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/web-framework/index.html" class="badge badge-primary">
+                Web Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/s3/index.html" class="badge badge-primary">
+                S3
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/salvo/index.html" class="badge badge-primary">
+                Salvo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/workflows/index.html" class="badge badge-primary">
+                Workflows
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/nginx/index.html" class="badge badge-primary">
+                Nginx
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django_1/index.html" class="badge badge-primary">
+                Django
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bottle/index.html" class="badge badge-primary">
+                Bottle
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypy_1/index.html" class="badge badge-primary">
+                PyPy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/attrs/index.html" class="badge badge-primary">
+                Attrs
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/django-rest-framework/index.html" class="badge badge-primary">
+                Django REST Framework
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/webtest/index.html" class="badge badge-primary">
+                WebTest
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/api/index.html" class="badge badge-primary">
+                API
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/proxy/index.html" class="badge badge-primary">
+                Proxy
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/jenkins/index.html" class="badge badge-primary">
+                Jenkins
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/automation/index.html" class="badge badge-primary">
+                Automation
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pymongo/index.html" class="badge badge-primary">
+                PyMongo
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/bulma/index.html" class="badge badge-primary">
+                Bulma
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pypi/index.html" class="badge badge-primary">
+                PyPI
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/pydantic/index.html" class="badge badge-primary">
+                Pydantic
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/allauth/index.html" class="badge badge-primary">
+                Allauth
+             </a>
+
+        <br/>
+     
+         <span class="oi oi-tag" title="oi-tag" aria-hidden="true"></span>
+             <a href="../tag/oauth/index.html" class="badge badge-primary">
+                OAuth
+             </a>
+
+        <br/>
+     
+ </div>
+
+<div>
+    
+</div>
+
+</aside>
+
+
+  </div>
+
+</main>
+
+ 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+     <script src="../../static/js/base.3faaede8cf71.js"></script>
+ 
+
+</body>
+</html>
